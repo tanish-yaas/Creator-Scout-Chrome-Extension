@@ -64,7 +64,7 @@ function doPost(e) {
   }
 }
 
-🎯 How to Use
+## 🎯 How to Use
 Open a creator's profile on Instagram (Web).
 
 Click the Creator Scout icon in your Chrome toolbar.

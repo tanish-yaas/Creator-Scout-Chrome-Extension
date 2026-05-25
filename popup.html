@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="app-wrapper">
+    
+    <header>
+      <div class="brand">
+        <div class="brand-dot"></div>
+        <span>Creator Scout</span>
+      </div>
+    </header>
+
+    <main>
+      <section class="surface">
+        <label for="sheet-url">Database Endpoint</label>
+        <div class="input-row">
+          <input type="text" id="sheet-url" placeholder="https://script.google.com/...">
+          <button id="save-url-btn" class="btn-ghost">Save</button>
+        </div>
+      </section>
+
+      <section class="surface">
+        <button id="fetch-btn" class="btn-secondary">Fetch Profile Data</button>
+        
+        <div id="preview-box" class="data-grid">
+          <div class="data-row">
+            <span class="label">Name</span>
+            <span class="value" id="prev-name">--</span>
+          </div>
+          <div class="data-row">
+            <span class="label">Handle</span>
+            <span class="value" id="prev-handle">--</span>
+          </div>
+          <div class="data-row">
+            <span class="label">Followers</span>
+            <span class="value" id="prev-followers">--</span>
+          </div>
+          <div class="data-row">
+            <span class="label">Tier</span>
+            <span class="pill" id="prev-tier">--</span>
+          </div>
+          <div class="data-row">
+            <span class="label">Category</span>
+            <span class="value" id="prev-category">--</span>
+          </div>
+        </div>
+
+        <button id="send-btn" class="btn-primary">Push to Sheet</button>
+      </section>
+    </main>
+
+    <footer>
+      <p id="status-msg">System Ready</p>
+    </footer>
+
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

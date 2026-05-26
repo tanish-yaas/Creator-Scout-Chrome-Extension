@@ -9,8 +9,8 @@
     
     <header>
       <div class="brand">
-        <div class="brand-dot"></div>
-        <span>Creator Scout</span>
+        <div id="status-dot" class="brand-dot"></div>
+        <span>Creator Scout v1.2</span>
       </div>
     </header>
 
@@ -48,6 +48,39 @@
             <span class="value" id="prev-category">--</span>
           </div>
         </div>
+
+        <div class="input-row-multi">
+          <div class="manual-input-group" style="flex: 3;">
+            <label for="creator-type">Type</label>
+            <select id="creator-type" class="custom-select">
+              <option value="Beauty">Beauty</option>
+              <option value="Business & Finance">Business & Finance</option>
+              <option value="Cinematographer / Photographer">Cinematographer / Photographer</option>
+              <option value="Comedy & Memes">Comedy & Memes</option>
+              <option value="Dance">Dance</option>
+              <option value="Education">Education</option>
+              <option value="Fashion">Fashion</option>
+              <option value="Fitness">Fitness</option>
+              <option value="Food">Food</option>
+              <option value="Gaming">Gaming</option>
+              <option value="Lifestyle & Vlogs">Lifestyle & Vlogs</option>
+              <option value="Motivation & Self-help">Motivation & Self-help</option>
+              <option value="Music">Music</option>
+              <option value="News & Commentary">News & Commentary</option>
+              <option value="Tech & Gadgets">Tech & Gadgets</option>
+              <option value="Travel">Travel</option>
+              <option value="Others">Others</option>
+            </select>
+          </div>
+
+          <div class="manual-input-group" style="flex: 2; position: relative;">
+            <label for="creator-ip">IP (Manual)</label>
+            <input type="text" id="creator-ip" placeholder="Enter IP..." autocomplete="off">
+            <ul id="ip-dropdown" class="autocomplete-dropdown hidden"></ul>
+          </div>
+        </div>
+        
+        <input type="text" id="custom-type" class="hidden" placeholder="Enter custom type..." style="margin-bottom: 4px;">
 
         <button id="send-btn" class="btn-primary">Push to Sheet</button>
       </section>

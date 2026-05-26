@@ -10,7 +10,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     };
 
     try {
-      // 1. Username
       const pathParts = window.location.pathname.split('/').filter(p => p);
       if (pathParts.length > 0) {
         data.username = pathParts[0];
@@ -20,7 +19,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       if (header) {
         const lines = header.innerText.split('\n').map(l => l.trim()).filter(l => l.length > 0);
         
-        // 2. NAME
         const firstStatIndex = lines.findIndex(l => /posts|followers/i.test(l));
         
         if (firstStatIndex > 0) {
@@ -33,13 +31,11 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
            data.name = data.username;
         }
 
-        // 3. FOLLOWERS
         const followersIndex = lines.findIndex(l => l.toLowerCase().includes('followers'));
         
         if (followersIndex !== -1) {
           data.followers = lines[followersIndex].split(' ')[0];
 
-          // 4. CATEGORY
           let categoryIndex = followersIndex + 1;
           
           while (categoryIndex < lines.length) {

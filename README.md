@@ -103,47 +103,33 @@ function doPost(e) {
                          .setMimeType(ContentService.MimeType.JSON);
   }
 }
+
 Click the physical Save (Floppy Disk) icon option.
-
 Click the blue Deploy macro button option in the menu grid, then select New deployment.
-
 Click the setup gear widget next to "Select type" and opt for Web app.
-
 Fill out your final parameter configurations exactly as follows:
-
-Execute as: Me (Your email)
-
-Who has access: Anyone (Crucial: Leaving this constrained to yourself stops the extension from hitting the cloud endpoint, resulting in Network Errors).
-
+* **Execute as:** Me (Your email)
+* **Who has access:** Anyone (Crucial: Leaving this constrained to yourself stops the extension from hitting the cloud endpoint, resulting in Network Errors).
 Hit Deploy, step through the basic Google authorization consent prompts, and Copy the generated Web app URL string to your clipboard.
 
 🎯 Usage Manual
-Navigate to any target creator profile webpage on Instagram (Web version).
-
-Open the Creator Scout panel using your browser action icon.
-
-Paste your clipboard's Database Endpoint URL into the designated setup input line and select Save (This step saves permanently via storage synchronization).
-
-Click the central Fetch Profile Data action element. The upper branding dot instantly glows Yellow, and your extension previews the profile stats alongside the auto-calculated bracket classification level.
-
-Choose your target niche profile assignment using the Type selector block (or tap "Others" to instantly create a customized type value).
-
-Provide or select a campaign tracking descriptor in the IP input area.
-
-Select Push to Sheet. The app tracks status on screen, and the upper configuration dot shifts into a solid glowing Green light state upon a successful database save transaction!
+1. Navigate to any target creator profile webpage on Instagram (Web version).
+2. Open the Creator Scout panel using your browser action icon.
+3. Paste your clipboard's Database Endpoint URL into the designated setup input line and select Save (This step saves permanently via storage synchronization).
+4. Click the central Fetch Profile Data action element. The upper branding dot instantly glows Yellow, and your extension previews the profile stats alongside the auto-calculated bracket classification level.
+5. Choose your target niche profile assignment using the Type selector block (or tap "Others" to instantly create a customized type value).
+6. Provide or select a campaign tracking descriptor in the IP input area.
+7. Select Push to Sheet. The app tracks status on screen, and the upper configuration dot shifts into a solid glowing Green light state upon a successful database save transaction!
 
 📂 File Structure Breakdown
-manifest.json: Configuration, scoping criteria blocks, active extensions permissions, and access mapping declarations.
-
-popup.html: The structural markup nodes, custom selectors, input containers, and database setup modules.
-
-popup.css: Premium dark styling parameters, layout constraints, custom dropdown arrows, and glowing responsive lighting nodes.
-
-popup.js: Core controller managing storage retrieval routines, combobox data filters, payload formatting, status classes, and HTTP network transactions.
-
-content.js: An injected programmatic traversal text analyzer script that safely reads the foreground Instagram tab text tree layers.
+* manifest.json: Configuration, scoping criteria blocks, active extensions permissions, and access mapping declarations.
+* popup.html: The structural markup nodes, custom selectors, input containers, and database setup modules.
+* popup.css: Premium dark styling parameters, layout constraints, custom dropdown arrows, and glowing responsive lighting nodes.
+* popup.js: Core controller managing storage retrieval routines, combobox data filters, payload formatting, status classes, and HTTP network transactions.
+* content.js: An injected programmatic traversal text analyzer script that safely reads the foreground Instagram tab text tree layers.
 
 ⚠️ Runtime Compliance Rules
-Keep your main Chrome browser utility language configurations defaulted to English so keyword parsing rules function flawlessly.
+* Keep your main Chrome browser utility language configurations defaulted to English so keyword parsing rules function flawlessly.
+* Refrain from terminating the extension panel menu view while the layout button renders the "Pushing..." network processing label to ensure data transfers complete uninterrupted.
 
 Refrain from terminating the extension panel menu view while the layout button renders the "Pushing..." network processing label to ensure data transfers complete uninterrupted.

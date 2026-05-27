@@ -6,14 +6,12 @@
 </head>
 <body>
   <div class="app-wrapper">
-    
     <header>
       <div class="brand">
         <div id="status-dot" class="brand-dot"></div>
         <span>Creator Scout v1.2</span>
       </div>
     </header>
-
     <main>
       <section class="surface">
         <label for="sheet-url">Database Endpoint</label>
@@ -22,33 +20,15 @@
           <button id="save-url-btn" class="btn-ghost">Save</button>
         </div>
       </section>
-
       <section class="surface">
         <button id="fetch-btn" class="btn-secondary">Fetch Profile Data</button>
-        
         <div id="preview-box" class="data-grid">
-          <div class="data-row">
-            <span class="label">Name</span>
-            <span class="value" id="prev-name">--</span>
-          </div>
-          <div class="data-row">
-            <span class="label">Handle</span>
-            <span class="value" id="prev-handle">--</span>
-          </div>
-          <div class="data-row">
-            <span class="label">Followers</span>
-            <span class="value" id="prev-followers">--</span>
-          </div>
-          <div class="data-row">
-            <span class="label">Tier</span>
-            <span class="pill" id="prev-tier">--</span>
-          </div>
-          <div class="data-row">
-            <span class="label">Category</span>
-            <span class="value" id="prev-category">--</span>
-          </div>
+          <div class="data-row"><span class="label">Name</span><span class="value" id="prev-name">--</span></div>
+          <div class="data-row"><span class="label">Handle</span><span class="value" id="prev-handle">--</span></div>
+          <div class="data-row"><span class="label">Followers</span><span class="value" id="prev-followers">--</span></div>
+          <div class="data-row"><span class="label">Tier</span><span class="pill" id="prev-tier">--</span></div>
+          <div class="data-row"><span class="label">Category</span><span class="value" id="prev-category">--</span></div>
         </div>
-
         <div class="input-row-multi">
           <div class="manual-input-group" style="flex: 3;">
             <label for="creator-type">Type</label>
@@ -72,26 +52,18 @@
               <option value="Others">Others</option>
             </select>
           </div>
-
           <div class="manual-input-group" style="flex: 2; position: relative;">
             <label for="creator-ip">IP (Manual)</label>
             <input type="text" id="creator-ip" placeholder="Enter IP..." autocomplete="off">
             <ul id="ip-dropdown" class="autocomplete-dropdown hidden"></ul>
           </div>
         </div>
-        
         <input type="text" id="custom-type" class="hidden" placeholder="Enter custom type..." style="margin-bottom: 4px;">
-
         <button id="send-btn" class="btn-primary">Push to Sheet</button>
       </section>
     </main>
-
-    <footer>
-      <p id="status-msg">System Ready</p>
-    </footer>
-
+    <footer><p id="status-msg">System Ready</p></footer>
   </div>
-
   <script src="popup.js"></script>
 </body>
 </html>

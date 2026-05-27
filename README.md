@@ -1,43 +1,39 @@
-# Creator-Scout-Chrome-Extension# Creator Scout 🕵️‍♂️
+# Creator Scout 🕵️‍♂️ (v1.2)
 
-A production-grade, minimalist Chrome Extension designed for influencer marketing. Creator Scout instantly scrapes public Instagram profile data and sends it directly to a private Google Sheet database with a single click.
+A production-grade, minimalist Chrome Extension designed for influencer marketing. Creator Scout instantly scrapes public Instagram profile data and sends it directly to your private Google Sheet database.
 
-## ✨ Features
-* **Smart Visual Scraping:** Bypasses Instagram's hidden DOM tricks by reading the visual text hierarchy to accurately capture the Creator's Name, Handle, Follower Count, and Professional Category.
-* **Auto-Tier Calculation:** Automatically calculates the influencer tier based on follower count (Nano, Micro, Mid-Tier, Macro, Mega) and applies a color-coded UI tag.
-* **Direct Google Sheets Integration:** Pushes data directly to a personal Google Sheet via a custom Google Apps Script Web App.
-* **Premium Minimalist UI:** A sleek, high-contrast dark mode interface inspired by modern AI tools.
-* **Privacy First:** 100% local scraping. No external APIs, no third-party servers, and no user data collection. Data goes straight from your browser to your database.
+## ✨ Core Features
+* **Intelligent Visual Scraping:** Scrapes data by reading the visual hierarchy of the page rather than relying on unstable HTML tags. Accurately captures Name, Handle, Followers, and Category.
+* **Influencer Tiering:** Automatically calculates and tags the creator's tier (Nano, Micro, Mid-Tier, Macro, Mega) with glowing UI pills.
+* **Searchable IP History:** The IP field supports a searchable dropdown history that persists your previously entered IPs for rapid data entry.
+* **Flexible Categorization:** Built-in dropdown with common niches, plus an "Others" option that allows for custom free-text input.
+* **Data Integrity:** Scrapes human-readable formats (e.g., "17.6K") but pushes clean, raw integers (e.g., "17600") to your Google Sheet for easy sorting and analysis.
+* **Minimalist Dashboard:** A high-contrast, dark-themed interface built for speed and zero-scroll usability.
 
 ---
 
 ## 🚀 Installation (How to install on your device)
 
-Since this is a custom, private tool, you will install it using Chrome's Developer Mode.
-
 1. **Download the Code:**
-   * Clone this repository or download it as a `.zip` file and extract it.
+   * Download the repository as a `.zip` file and extract it to a folder named `creator-scout`.
 2. **Open Chrome Extensions:**
-   * Open Google Chrome and navigate to `chrome://extensions/` (or click the puzzle piece icon > Manage extensions).
+   * Open Chrome and navigate to `chrome://extensions/`.
 3. **Enable Developer Mode:**
    * Toggle the **Developer mode** switch in the top right corner to ON.
 4. **Load the Extension:**
    * Click the **Load unpacked** button in the top left.
 5. **Select the Folder:**
    * Select the unzipped `creator-scout` folder on your computer.
-6. **Pin it:** * Click the puzzle piece in your Chrome toolbar and pin Creator Scout for easy access.
 
 ---
 
-## 🗄️ Backend Setup (The Google Apps Script)
-
-To make the extension work, you need a database. We use a Google Sheet combined with Google Apps Script to catch the data.
+## 🗄️ Database Setup (Apps Script)
 
 1. Create a new [Google Sheet](https://sheets.new).
-2. In the top row, add these headers in columns A through G: 
-   `Date` | `Username` | `Name` | `Followers` | `Category` | `Tier` | `URL`
-3. In the top menu, click **Extensions > Apps Script**.
-4. Delete any existing code and paste the following JavaScript into the editor:
+2. Set up headers in **Columns A through I**:
+   `Date` | `Username` | `Name` | `Followers` | `Category` | `Tier` | `Type` | `IP` | `URL`
+3. Click **Extensions > Apps Script**.
+4. Paste the following JavaScript:
 
 ```javascript
 function doPost(e) {
@@ -51,7 +47,9 @@ function doPost(e) {
       data.name, 
       data.followers, 
       data.category, 
-      data.tier,        
+      data.tier,
+      data.type,        
+      data.ip,          
       data.url
     ]);
     
@@ -63,32 +61,3 @@ function doPost(e) {
                          .setMimeType(ContentService.MimeType.JSON);
   }
 }
-
-## 🎯 How to Use
-Open a creator's profile on Instagram (Web).
-
-Click the Creator Scout icon in your Chrome toolbar.
-
-Paste the Google Apps Script Web App URL you generated above into the Database Endpoint input and click Save. (You only need to do this once).
-
-Click Fetch Profile Data. The extension will scrape the page and display a preview of the data and their Influencer Tier.
-
-Click Push to Sheet.
-
-Check your Google Sheet—the creator's data is now safely logged in a new row!
-
-📂 File Structure
-manifest.json: Extension configuration and permissions.
-
-popup.html: The minimalist UI structure.
-
-popup.css: High-end dark theme styling and glowing tier tags.
-
-popup.js: The extension's logic, math calculations, and API POST requests.
-
-content.js: The scraper script that reads the Instagram DOM visually to extract accurate data.
-
-⚠️ Important Notes
-Ensure your Chrome language is set to English for the DOM text scraper to accurately identify keywords like "followers".
-
-Do not close the extension popup while it says "Pushing...".

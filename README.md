@@ -87,10 +87,3 @@ function doPost(e) {
                          .setMimeType(ContentService.MimeType.JSON);
   }
 }
-
-content.js: An injected programmatic traversal text analyzer script that safely reads the foreground Instagram tab text tree layers.
-
-⚠️ Runtime Compliance Rules
-Keep your main Chrome browser utility language configurations defaulted to English so keyword parsing rules function flawlessly.
-
-Refrain from terminating the extension panel menu view while the layout button renders the "Pushing..." network processing label to ensure data transfers complete uninterrupted.

@@ -241,6 +241,7 @@ footer {
 .tier-macro { background: rgba(252, 176, 69, 0.1); color: #fcb045; border: 1px solid rgba(252, 176, 69, 0.3); box-shadow: 0 0 10px rgba(252, 176, 69, 0.2); }
 .tier-mega { background: rgba(243, 139, 168, 0.1); color: #f38ba8; border: 1px solid rgba(243, 139, 168, 0.3); box-shadow: 0 0 10px rgba(243, 139, 168, 0.2); }
 
+/* --- NEW: Autocomplete Dropdown --- */
 .autocomplete-dropdown {
   position: absolute;
   top: 100%;
@@ -252,7 +253,7 @@ footer {
   background-color: var(--surface-color);
   border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: var(--radius-sm);
-  max-height: 110px; 
+  max-height: 110px; /* Forces scroll if more than ~3 items */
   overflow-y: auto;
   z-index: 100;
   box-shadow: 0 4px 12px rgba(0,0,0,0.5);

@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Creator Scout",
   "version": "1.2",
-  "description": "Scout and save Instagram creators to Google Sheets.",
+  "description": "Scout and save Instagram creators to Google Sheets and Master Database.",
   "action": {
     "default_popup": "popup.html"
   },
@@ -13,6 +13,8 @@
   ],
   "host_permissions": [
     "*://*.instagram.com/*",
-    "https://script.google.com/*"
+    "https://script.google.com/*",
+    "https://*.make.com/*",
+    "https://*.zapier.com/*"
   ]
 }

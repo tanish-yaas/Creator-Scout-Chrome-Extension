@@ -81,25 +81,18 @@
             </select>
           </div>
           <div class="field" style="flex: 2; position: relative;">
-            <label for="creator-ip">IP</label>
-            <input type="text" id="creator-ip" placeholder="Enter IP" autocomplete="off">
-            <ul id="ip-dropdown" class="dropdown hidden"></ul>
+            <label for="mb-brand">Brand</label>
+            <input type="text" id="mb-brand" placeholder="e.g. Nykaa" autocomplete="off">
+            <ul id="brand-dropdown" class="dropdown hidden"></ul>
           </div>
         </div>
         <input type="text" id="custom-type" class="hidden" placeholder="Enter a custom type">
 
         <div id="moodboard-fields" class="hidden">
-          <div class="row">
-            <div class="field" style="flex: 1; position: relative;">
-              <label for="mb-brand">Brand</label>
-              <input type="text" id="mb-brand" placeholder="e.g. Nykaa" autocomplete="off">
-              <ul id="brand-dropdown" class="dropdown hidden"></ul>
-            </div>
-            <div class="field" style="flex: 1; position: relative;">
-              <label for="mb-niche">Niche</label>
-              <input type="text" id="mb-niche" placeholder="e.g. GRWM" autocomplete="off">
-              <ul id="niche-dropdown" class="dropdown hidden"></ul>
-            </div>
+          <div class="field" style="position: relative;">
+            <label for="mb-niche">Niche</label>
+            <input type="text" id="mb-niche" placeholder="e.g. GRWM, festive looks" autocomplete="off">
+            <ul id="niche-dropdown" class="dropdown hidden"></ul>
           </div>
           <div class="field">
             <label>Festive tags</label>
@@ -116,9 +109,18 @@
       </button>
     </main>
 
-    <footer><p id="status-msg">Ready</p></footer>
+    <footer>
+      <p id="status-msg">Ready</p>
+      <p class="whoami"><span id="team-state" class="team-state"></span><button id="who-btn" class="who-link"></button></p>
+      <form id="who-form" class="who-form hidden">
+        <input type="text" id="who-input" placeholder="Your name, shown on the team board" autocomplete="off">
+        <button type="submit" class="ghost">Save</button>
+      </form>
+    </footer>
   </div>
+  <script src="config.js"></script>
   <script src="db.js"></script>
+  <script src="platforms.js"></script>
   <script src="scraper.js"></script>
   <script src="popup.js"></script>
 </body>

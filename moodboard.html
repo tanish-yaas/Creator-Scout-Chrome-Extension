@@ -11,10 +11,8 @@
   <nav class="top">
     <a class="mark" href="#" id="home-link"><span class="dot"></span>Creator Scout</a>
     <div class="top-actions">
-      <div id="layout-toggle" class="seg hidden" role="group" aria-label="Layout">
-        <button data-layout="carousel" class="on">Carousel</button>
-        <button data-layout="grid">Grid</button>
-      </div>
+      <span id="sync-state" class="sync-state"></span>
+      <button id="new-brand" class="ghost-btn">New brand</button>
       <button id="copy-links" class="ghost-btn">Copy links</button>
       <a class="ghost-btn" href="sheet.html">Open sheet</a>
     </div>
@@ -24,11 +22,34 @@
     <button id="back" class="back hidden">← All brands</button>
     <h1 id="title" class="title"></h1>
     <p id="sub" class="sub"></p>
+    <div id="brand-actions" class="brand-actions hidden">
+      <button id="edit-card" class="ghost-btn">Edit card</button>
+    </div>
     <label class="search glow-pill">
       <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M16 16l4.5 4.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
       <input id="search" type="search" placeholder="Search brands, creators, captions" aria-label="Search" autocomplete="off">
     </label>
+    <div id="view-tabs" class="seg view-tabs hidden" role="tablist">
+      <button data-tab="reels" class="on" role="tab">Reels <span id="count-reels"></span></button>
+      <button data-tab="creators" role="tab">Creators <span id="count-creators"></span></button>
+    </div>
     <div id="filters" class="filters"></div>
+    <div id="reel-tools" class="reel-tools hidden">
+      <button id="add-links-btn" class="ghost-btn">+ Add reel links</button>
+      <div id="layout-toggle" class="seg" role="group" aria-label="Layout">
+        <button data-layout="carousel" class="on">Carousel</button>
+        <button data-layout="grid">Grid</button>
+      </div>
+    </div>
+    <form id="add-links" class="add-links hidden">
+      <textarea id="links-input" rows="4" placeholder="Paste Instagram or YouTube links, one per line&#10;https://www.instagram.com/reel/…&#10;https://youtube.com/shorts/…"></textarea>
+      <div class="add-row">
+        <input id="links-niche" list="links-niches" placeholder="Niche (optional)" autocomplete="off">
+        <datalist id="links-niches"></datalist>
+        <button type="submit" id="links-submit" class="glow-pill add-submit">Add to board</button>
+      </div>
+      <p id="links-progress" class="links-progress"></p>
+    </form>
   </header>
 
   <section id="stage" class="stage" aria-roledescription="carousel">
@@ -40,12 +61,55 @@
   </section>
 
   <section id="grid" class="grid hidden"></section>
-
+  <section id="creators" class="creators hidden"></section>
   <section id="info" class="info"></section>
+
+  <!-- Brand card editor -->
+  <div id="brand-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="bm-title">
+    <form id="bm-form" class="modal-box">
+      <h2 id="bm-title" class="modal-title">Edit card</h2>
+      <div class="bm-body">
+        <div class="bm-preview"><div id="bm-card" class="card preview-card active"></div></div>
+        <div class="bm-fields">
+          <label class="fld">Brand name
+            <input id="bm-name" type="text" autocomplete="off" placeholder="e.g. Nykaa">
+          </label>
+          <div class="fld">Logo
+            <div class="logo-row">
+              <label class="ghost-btn file-btn">Upload logo<input id="bm-logo" type="file" accept="image/*" hidden></label>
+              <button type="button" id="bm-logo-clear" class="link-btn">Remove logo</button>
+            </div>
+            <span class="hint">PNG with a transparent background looks best.</span>
+          </div>
+          <div class="fld">Card colour
+            <div id="bm-swatches" class="swatches"></div>
+          </div>
+        </div>
+      </div>
+      <p id="bm-error" class="modal-error"></p>
+      <div class="modal-actions">
+        <button type="button" id="bm-cancel" class="ghost-btn">Cancel</button>
+        <button type="submit" id="bm-save" class="glow-pill modal-save">Save card</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Reel player -->
+  <div id="player" class="modal hidden" role="dialog" aria-modal="true" aria-label="Reel player">
+    <div class="player-box">
+      <button id="player-close" class="player-close" aria-label="Close">×</button>
+      <button id="player-prev" class="arrow pl-prev" aria-label="Previous">←</button>
+      <div id="player-frame" class="player-frame"></div>
+      <div id="player-side" class="player-side"></div>
+      <button id="player-next" class="arrow pl-next" aria-label="Next">→</button>
+    </div>
+  </div>
 
   <div id="toast" class="toast" role="status"></div>
 
+  <script src="config.js"></script>
   <script src="db.js"></script>
+  <script src="platforms.js"></script>
   <script src="moodboard.js"></script>
 </body>
 </html>

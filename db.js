@@ -24,7 +24,7 @@ const DEFAULT_FESTIVE = [
 
 const TAPE_FALLBACK_COLORS = ['#7A6FF0', '#2BA6A0', '#D46A6A', '#8C9B3A', '#C77D3A', '#5C8FD6'];
 
-// The first 12 columns match the old Apps Script sheet exactly, so old sheets keep lining up.
+// Your Creator Scout headings (IP is now Brand), then the moodboard columns.
 const SHEET_COLUMNS = [
   ['Date', r => formatDate(r.savedAt)],
   ['Platform', r => r.platform],
@@ -34,16 +34,16 @@ const SHEET_COLUMNS = [
   ['Category', r => r.category],
   ['Tier', r => r.tier],
   ['Type', r => r.type],
-  ['IP', r => r.ip],
+  ['Brand', r => r.brand],
   ['URL', r => r.url],
   ['Avg Views (10)', r => (r.avgViews && r.avgViews !== '--') ? r.avgViews : ''],
   ['Country', r => r.country],
   ['Content URL', r => r.contentUrl],
-  ['Brand', r => r.brand],
   ['Niche', r => r.niche],
   ['Festive Tags', r => (r.festive || []).join(', ')],
   ['Content Views', r => r.contentViews || ''],
-  ['Content Likes', r => r.contentLikes || '']
+  ['Content Likes', r => r.contentLikes || ''],
+  ['Saved By', r => r.savedBy]
 ];
 
 function formatDate(ts) {
@@ -79,6 +79,7 @@ async function getTaxonomy() {
   const t = r[SCOUT_KEYS.taxonomy] || {};
   return {
     brands: t.brands || {},            // { "Brand": ["Niche", ...] }
+    meta: t.meta || {},                // { "Brand": { logo, color } }
     festive: t.festive || DEFAULT_FESTIVE.slice()
   };
 }
@@ -103,7 +104,7 @@ async function registerTaxonomy({ brand, niche, festive }) {
 }
 
 // Same content (or same profile when there is no content) = same row. Returns { record, updated }.
-async function upsertRecord(rec) {
+async function localUpsert(rec) {
   const records = await getRecords();
   const key = r => (r.contentUrl || r.url || '').toLowerCase().replace(/\/+$/, '');
   const k = key(rec);
@@ -122,7 +123,7 @@ async function upsertRecord(rec) {
   return { record: rec, updated };
 }
 
-async function updateRecord(id, patch) {
+async function localUpdate(id, patch) {
   const records = await getRecords();
   const i = records.findIndex(r => r.id === id);
   if (i === -1) return null;
@@ -132,7 +133,7 @@ async function updateRecord(id, patch) {
   return records[i];
 }
 
-async function deleteRecord(id) {
+async function localDelete(id) {
   const records = await getRecords();
   await setRecords(records.filter(r => r.id !== id));
 }
@@ -221,7 +222,7 @@ function calculateTier(num) {
 
 // Shrinks a remote thumbnail into a small JPEG data URL so it never expires
 // (Instagram CDN links die after a few days).
-async function thumbToDataUrl(url, width = 360) {
+async function thumbToDataUrl(url, width = 280) {
   if (!url) return '';
   try {
     const res = await fetch(url);
@@ -230,7 +231,7 @@ async function thumbToDataUrl(url, width = 360) {
     const scale = Math.min(1, width / bmp.width);
     const canvas = new OffscreenCanvas(Math.round(bmp.width * scale), Math.round(bmp.height * scale));
     canvas.getContext('2d').drawImage(bmp, 0, 0, canvas.width, canvas.height);
-    const blob = await canvas.convertToBlob({ type: 'image/jpeg', quality: 0.75 });
+    const blob = await canvas.convertToBlob({ type: "image/jpeg", quality: 0.72 });
     return await new Promise(res2 => {
       const fr = new FileReader();
       fr.onload = () => res2(fr.result);
@@ -356,4 +357,187 @@ function downloadBlob(blob, filename) {
   a.href = url; a.download = filename;
   document.body.appendChild(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 2000);
+}
+
+// ==========================================
+// Team sync — shared board through the Apps Script team database (config.js)
+// chrome.storage.local acts as a cache, so pages render instantly and work offline.
+// ==========================================
+
+const teamOn = () => typeof TEAM_DB_URL !== 'undefined' && !!TEAM_DB_URL;
+// Company-only deployments need the person's Google sign-in cookies
+const teamCreds = () => (typeof TEAM_DOMAIN_ONLY !== 'undefined' && TEAM_DOMAIN_ONLY) ? 'include' : 'omit';
+
+function recordKey(r) {
+  return String(r.contentUrl || r.url || '').toLowerCase().replace(/\/+$/, '').replace(/^https?:\/\/(www\.)?/, '');
+}
+
+// Older rows kept the brand in "ip"; brand and IP are the same thing now
+function normalizeRecord(r) {
+  const out = { ...r };
+  if (!out.brand && out.ip) out.brand = out.ip;
+  delete out.ip;
+  if (!Array.isArray(out.festive)) out.festive = String(out.festive || '').split(',').map(x => x.trim()).filter(Boolean);
+  return out;
+}
+
+async function teamCall(action, payload = {}) {
+  const res = await fetch(TEAM_DB_URL, {
+    method: 'POST',
+    credentials: teamCreds(),
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify({ key: TEAM_KEY, action, ...payload })
+  });
+  let data;
+  try { data = await res.json(); } catch (e) { throw new Error('The team database sent back something unexpected. Check the web app URL in config.js.'); }
+  if (!data.ok) throw new Error(data.error || 'Team database error');
+  return data;
+}
+
+async function getTeamInfo() {
+  const r = await storageGet(['scoutTeamInfo']);
+  return r.scoutTeamInfo || {};
+}
+
+let pulling = null;
+// Pull the shared board into the local cache. Only writes when something changed,
+// so open pages don't re-render while someone is typing.
+function pullTeam() {
+  if (!teamOn()) return Promise.resolve(false);
+  if (pulling) return pulling;
+  pulling = (async () => {
+    try {
+      const res = await fetch(`${TEAM_DB_URL}?action=list&key=${encodeURIComponent(TEAM_KEY)}&t=${Date.now()}`, { credentials: teamCreds() });
+      const d = await res.json();
+      if (!d.ok) throw new Error(d.error || 'Team database error');
+
+      const info = await getTeamInfo();
+      const local = (await getRecords()).map(normalizeRecord);
+      const server = d.records.map(normalizeRecord);
+      const serverKeys = new Set(server.map(recordKey));
+      const exported = new Map(local.map(r => [r.id, r.exportedAt]));
+
+      // Rows that never reached the team database (saved offline, or before it was connected) get uploaded.
+      // Rows that were synced before but are gone from the server were deleted by a teammate, so they drop.
+      const pending = local.filter(r => !r.synced && !serverKeys.has(recordKey(r))).map(r => ({ ...r, pending: true }));
+      const merged = [...pending, ...server.map(r => ({ ...r, synced: true, exportedAt: exported.get(r.id) || null }))]
+        .sort((a, b) => (b.savedAt || 0) - (a.savedAt || 0));
+
+      const tax = await getTaxonomy();
+      const brands = {}, meta = {};
+      d.brands.forEach(b => { brands[b.name] = b.niches || []; meta[b.name] = { logo: b.logo || '', color: b.color || '' }; });
+      Object.keys(tax.brands).forEach(b => { if (pending.some(r => r.brand === b) && !brands[b]) brands[b] = tax.brands[b]; });
+      const newTax = { brands, meta, festive: d.festive && d.festive.length ? d.festive : tax.festive };
+
+      if (JSON.stringify(merged) !== JSON.stringify(await getRecords())) await setRecords(merged);
+      if (JSON.stringify(newTax) !== JSON.stringify(tax)) await setTaxonomy(newTax);
+      await storageSet({ scoutTeamInfo: { ...info, sheetUrl: d.sheetUrl, pulledAt: Date.now(), error: '' } });
+
+      if (pending.length) await flushOutbox();
+      return true;
+    } catch (e) {
+      const info = await getTeamInfo();
+      await storageSet({ scoutTeamInfo: { ...info, error: e.message || 'Could not reach the team database' } });
+      return false;
+    } finally {
+      pulling = null;
+    }
+  })();
+  return pulling;
+}
+
+// Upload anything saved while the team database was unreachable
+async function flushOutbox() {
+  if (!teamOn()) return;
+  const pending = (await getRecords()).filter(r => r.pending);
+  for (const p of pending) {
+    try {
+      const { pending: _p, synced, exportedAt, id, ...rec } = p;
+      const d = await teamCall('upsert', { record: rec });
+      await replaceLocal(p.id, { ...normalizeRecord(d.record), synced: true, exportedAt: exportedAt || null });
+    } catch (e) { break; }
+  }
+}
+
+async function replaceLocal(oldId, rec) {
+  const records = await getRecords();
+  const i = records.findIndex(r => r.id === oldId || recordKey(r) === recordKey(rec));
+  if (i === -1) records.unshift(rec); else records[i] = rec;
+  await setRecords(records);
+}
+
+// ---------- the functions pages call ----------
+
+async function upsertRecord(rec) {
+  rec = normalizeRecord(rec);
+  if (!teamOn()) return localUpsert(rec);
+  try {
+    const { pending, synced, exportedAt, ...clean } = rec;
+    const d = await teamCall('upsert', { record: clean });
+    const saved = { ...normalizeRecord(d.record), synced: true };
+    await replaceLocal(saved.id, saved);
+    await registerTaxonomy(saved);
+    return { record: saved, updated: d.updated };
+  } catch (e) {
+    const r = await localUpsert({ ...rec, pending: true });
+    return { ...r, offline: true, error: e.message };
+  }
+}
+
+async function updateRecord(id, patch) {
+  const rec = await localUpdate(id, patch);
+  if (!teamOn() || !rec || !rec.synced) return rec;
+  const d = await teamCall('update', { id, patch });
+  const saved = { ...normalizeRecord(d.record), synced: true, exportedAt: rec.exportedAt || null };
+  await replaceLocal(id, saved);
+  return saved;
+}
+
+async function deleteRecord(id) {
+  const rec = (await getRecords()).find(r => r.id === id);
+  await localDelete(id);
+  if (teamOn() && rec && rec.synced) await teamCall('delete', { id });
+}
+
+async function setBrandMeta(name, patch) {
+  const tax = await getTaxonomy();
+  tax.brands[name] = tax.brands[name] || [];
+  tax.meta[name] = { ...(tax.meta[name] || {}), ...patch };
+  await setTaxonomy(tax);
+  if (!teamOn()) return tax.meta[name];
+  const d = await teamCall('brand', { name, patch });
+  const t2 = await getTaxonomy();
+  t2.meta[name] = { logo: d.brand.logo, color: d.brand.color };
+  t2.brands[name] = d.brand.niches || t2.brands[name] || [];
+  await setTaxonomy(t2);
+  return t2.meta[name];
+}
+
+async function renameBrandEverywhere(from, to) {
+  const records = await getRecords();
+  records.forEach(r => { if (r.brand === from) r.brand = to; });
+  const tax = await getTaxonomy();
+  tax.brands[to] = [...new Set([...(tax.brands[to] || []), ...(tax.brands[from] || [])])];
+  tax.meta[to] = { ...(tax.meta[from] || {}), ...(tax.meta[to] || {}) };
+  delete tax.brands[from];
+  delete tax.meta[from];
+  await setRecords(records);
+  await setTaxonomy(tax);
+  if (teamOn()) await teamCall('renameBrand', { from, to });
+}
+
+async function saveFestiveList(list) {
+  const tax = await getTaxonomy();
+  tax.festive = list;
+  await setTaxonomy(tax);
+  if (teamOn()) await teamCall('festive', { festive: list });
+}
+
+// Keep a page in sync: pull now, every 30 s, and whenever the tab comes back into view
+function startTeamSync() {
+  if (!teamOn()) return;
+  pullTeam();
+  setInterval(pullTeam, 30000);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) pullTeam(); });
+  window.addEventListener('online', pullTeam);
 }

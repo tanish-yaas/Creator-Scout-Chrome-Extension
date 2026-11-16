@@ -1,37 +1,30 @@
-# Creator Scout v3.2 🕵️‍♂️
+# Creator Scout v4.0 🕵️‍♂️
 
 Creator Scout is a Chrome extension for scouting Instagram and YouTube creators and their content. Everything you save stays inside the extension. You copy it into any Google Sheet when you want, it still syncs to the master database, and it lands on a moodboard grouped by brand and niche.
 
 ## ✨ Features
-* **Profiles and content:** Works on Instagram profiles, reels and posts, and YouTube channels, shorts and videos. The platform is picked automatically from the open tab.
-* **Instagram scraper:** Reads name, handle, followers and category from profiles. On reels and posts it also reads the thumbnail, caption, likes and comments, then looks up the creator's follower count.
-* **YouTube API:** Subscribers, country and the **average views of the last 10 videos**. On a short or video it also gets that video's views, likes and thumbnail.
-* **Tier classification:** Nano, Micro, Mid-Tier, Macro or Mega.
-* **Built-in sheet (no Apps Script needed):** Every save goes into the extension's own sheet. Click **Open sheet** in the popup (it shows how many creators and how many are new) to open the **Creator list** page, which has:
-  * **Copy for Google Sheets**: copies every row with headings as a real table. Paste into A1.
-  * **Copy new rows**: copies only rows you haven't copied yet. Paste under your last row.
-  * **Export Excel** (.xlsx) and **Export CSV**.
-  * Editable cells for Name, Category, Type, IP, Country, Brand, Niche and Festive Tags, plus a row filter and per-row delete.
-* **Master database:** Every save is also sent to the Make.com master webhook, the same as before.
-* **Moodboard:** Click **Moodboard ↗** in the popup.
-  * The home screen is a curved carousel with **one card per brand**. Side cards sit in halftone, and the middle card gets a green scan line that brings it into colour.
-  * You can drag, swipe, scroll or use the arrow keys, and the carousel loops. A search bar and festive / platform filters sit above it.
-  * Below the carousel are the brand's niches, festive tags and top creators.
-  * Opening a brand gives the same carousel for its reels, with niche filters, a grid view, and a details row where you can re-file a reel (brand, niche, festive tags) or remove it.
-  * Double-click a brand's title to rename it. **Copy links** copies the current view, grouped by brand and niche.
-  * It updates live while you scout.
+* **One click on a reel:** Open the popup on any Instagram reel, post, profile, or YouTube short, video or channel, and it captures the page straight away. You get the thumbnail, caption and stats, plus the creator's name, followers, tier and profile picture. Pick a brand (it remembers your last one), optionally a niche and festive tags, and press **Save to moodboard**. The reel lands on that brand's moodboard and the creator is added to the sheet.
+* **Brand (was IP):** Brand and IP are the same thing now. Old rows with an IP are moved to Brand automatically, and the Make.com payload still includes `ip` (a copy of brand) so the existing scenario keeps working.
+* **Shared team board:** With the team database connected (see `team-backend/SETUP.md`), everyone using the extension sees and adds to the same board and sheet, on any device. Saves made while offline upload automatically later.
+* **Moodboard dashboard:**
+  * The home screen is a curved carousel with one card per brand. Use **Edit card** to upload the brand's logo and pick a card colour, and **New brand** to add one.
+  * Drag, swipe, use the arrow keys, or scroll sideways (trackpad or Shift + wheel) to move the carousel. Normal scrolling scrolls the page.
+  * Open a brand to get two tabs:
+    * **Reels**: a carousel or grid of its reels, with niche and festive filters. Click a reel to play it embedded (Instagram or YouTube) next to its details. Use **+ Add reel links** to paste reference links; they're looked up and added with their creators.
+    * **Creators**: everyone saved for that brand, with followers, tier, niches, how many of their reels are saved, and who saved them. **Copy list for Sheets** copies the table.
+  * Re-file a reel (brand, niche, festive tags) from the row under the carousel. Double-click a brand's title to rename it for everyone.
+* **Creator list (the sheet):** **Open sheet** in the popup opens every saved row with **Copy for Google Sheets**, **Copy new rows**, **Export Excel** and **Export CSV**. You can edit cells in place. With the team board connected, it also links to the team's Google Sheet.
+* **Master database:** Every save still goes to the Make.com master webhook.
 
 ## 📄 Sheet columns
-The first 12 match the old Apps Script sheet, so existing sheets keep lining up:
-
-`Date` | `Platform` | `Username` | `Name` | `Followers` | `Category` | `Tier` | `Type` | `IP` | `URL` | `Avg Views (10)` | `Country` | `Content URL` | `Brand` | `Niche` | `Festive Tags` | `Content Views` | `Content Likes`
+`Date` | `Platform` | `Username` | `Name` | `Followers` | `Category` | `Tier` | `Type` | `Brand` | `URL` | `Avg Views (10)` | `Country` | `Content URL` | `Niche` | `Festive Tags` | `Content Views` | `Content Likes` | `Saved By`
 
 ## 🔌 Master webhook payload
-Each save POSTs JSON to `MASTER_WEBHOOK_URL` with the original fields (`platform, username, name, followers, category, tier, type, ip, url, avgViews, country`) plus `contentUrl, contentKind, thumbUrl, caption, contentViews, contentLikes, contentComments, postedAt, brand, niche, festive` (comma-separated) and `savedAt`. Make.com ignores fields you don't map, so the existing scenario keeps working. Map the new ones whenever you need them.
+Each save POSTs JSON to `MASTER_WEBHOOK_URL` (in `config.js`, same URL as before). It includes the original fields (`platform, username, name, followers, category, tier, type, ip, url, avgViews, country`), with `ip` now holding the brand. It also includes `brand, contentUrl, contentKind, thumbUrl, caption, contentViews, contentLikes, contentComments, postedAt, niche, festive` (comma-separated), `savedBy` and `savedAt`. Make.com ignores fields you haven't mapped, so the existing scenario keeps working.
 
 ## 🧩 Install
-1. Go to `chrome://extensions` and turn on **Developer mode**.
-2. Click **Load unpacked** and pick this folder.
+1. Fill in `config.js`. The team database URL and key come from `team-backend/SETUP.md`. Leave them empty to keep data on one browser.
+2. Go to `chrome://extensions`, turn on **Developer mode**, click **Load unpacked**, and pick this folder.
 
 ## 🗂 Files
 | File | What it does |
@@ -39,8 +32,11 @@ Each save POSTs JSON to `MASTER_WEBHOOK_URL` with the original fields (`platform
 | `popup.html / popup.js / popup.css` | The popup: fetch, tag and save |
 | `sheet.html / sheet.js / sheet.css` | Creator list: the built-in sheet with copy and export |
 | `scraper.js` | Injected into Instagram to read profiles, reels and posts |
-| `db.js` | Shared storage, sheet export and number helpers |
+| `config.js` | Master webhook, YouTube key and team database settings |
+| `db.js` | Storage, team sync, sheet export and number helpers |
+| `platforms.js` | Instagram and YouTube lookups shared by the popup and dashboard |
+| `team-backend/` | Apps Script for the shared team database, and its setup guide |
 | `moodboard.html / moodboard.js / moodboard.css` | The moodboard dashboard |
 | `fonts/` | Bundled Scout Pixel (headline font made for this extension) and Inter (SIL Open Font License) |
 
-Data is stored in `chrome.storage.local` on this browser. Thumbnails are saved as small copies, so they don't break when Instagram's image links expire.
+Each browser keeps a local copy, so pages open instantly and work offline. The team database is the shared source of truth. Thumbnails are saved as small copies, so they don't break when Instagram's image links expire.

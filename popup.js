@@ -1,8 +1,4 @@
-// ==========================================
-// 🏢 CONFIGURATION (master database — unchanged)
-// ==========================================
-const MASTER_WEBHOOK_URL = "https://hook.eu1.make.com/3lub8lb24862yx9odq1d1avlkronthhu";
-const YOUTUBE_API_KEY = "AIzaSyCtq8nF3PxPLS4dNBBX5JsUakBbK5Kyj-8";
+// Creator Scout popup. Settings (master webhook, YouTube key, team database) live in config.js.
 
 const $ = id => document.getElementById(id);
 
@@ -12,7 +8,6 @@ const statusMsg = $('status-msg');
 const statusDot = $('status-dot');
 const typeSelect = $('creator-type');
 const customTypeInput = $('custom-type');
-const ipInput = $('creator-ip');
 const brandInput = $('mb-brand');
 const nicheInput = $('mb-niche');
 const toggleIg = $('toggle-ig');
@@ -22,7 +17,6 @@ const ytOnlyRows = document.querySelectorAll('.yt-only');
 
 let currentPlatform = 'Instagram';
 let current = null;          // { creator, content } from the last fetch
-let savedIpHistory = [];
 let taxonomy = { brands: {}, festive: [] };
 let selectedFestive = [];
 let festiveExpanded = false;
@@ -67,11 +61,11 @@ toggleYt.addEventListener('click', () => setPlatform('YouTube'));
 // ---------- init ----------
 
 async function init() {
-  chrome.storage.sync.get(['savedType', 'savedCustomType', 'savedIp', 'ipHistory', 'savedPlatform', 'savedBrand', 'savedNiche', 'savedFestive'], (r) => {
-    if (r.savedIp) ipInput.value = r.savedIp;
-    if (r.ipHistory) savedIpHistory = r.ipHistory;
+  chrome.storage.sync.get(['savedType', 'savedCustomType', 'savedIp', 'savedPlatform', 'savedBrand', 'savedNiche', 'savedFestive', 'savedBy'], (r) => {
     if (r.savedPlatform) setPlatform(r.savedPlatform);
-    if (r.savedBrand) brandInput.value = r.savedBrand;
+    brandInput.value = r.savedBrand || r.savedIp || '';
+    savedBy = r.savedBy || '';
+    renderWho();
     if (r.savedNiche) nicheInput.value = r.savedNiche;
     if (r.savedFestive) selectedFestive = r.savedFestive;
     if (r.savedType) {
@@ -87,13 +81,47 @@ async function init() {
   taxonomy = await getTaxonomy();
   renderFestiveChips();
   updateSavedCount();
+  renderTeamState();
 
-  // Auto-pick the platform from the open tab
+  // Refresh brands and counts from the team board in the background
+  pullTeam().then(async () => {
+    taxonomy = await getTaxonomy();
+    renderFestiveChips();
+    updateSavedCount();
+    renderTeamState();
+  });
+
+  // Capture the page straight away when the popup opens on Instagram or YouTube
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-  if (tab && tab.url) {
-    if (tab.url.includes('youtube.com') || tab.url.includes('youtu.be')) setPlatform('YouTube');
-    else if (tab.url.includes('instagram.com')) setPlatform('Instagram');
-  }
+  if (tab && tab.url && /instagram\.com|youtube\.com|youtu\.be/.test(tab.url)) fetchBtn.click();
+}
+
+// ---------- who is saving ----------
+
+let savedBy = '';
+function renderWho() {
+  $('who-btn').innerText = savedBy ? `as ${savedBy}` : 'Add your name';
+}
+$('who-btn').addEventListener('click', () => {
+  $('who-form').classList.remove('hidden');
+  $('who-input').value = savedBy;
+  $('who-input').focus();
+});
+$('who-form').addEventListener('submit', (e) => {
+  e.preventDefault();
+  savedBy = $('who-input').value.trim();
+  chrome.storage.sync.set({ savedBy });
+  $('who-form').classList.add('hidden');
+  renderWho();
+});
+
+async function renderTeamState() {
+  const el = $('team-state');
+  if (!teamOn()) { el.innerText = 'This browser only'; el.className = 'team-state'; return; }
+  const info = await getTeamInfo();
+  el.innerText = info.error ? 'Team offline' : 'Team live';
+  el.className = 'team-state ' + (info.error ? 'off' : 'on');
+  el.title = info.error || '';
 }
 
 // ---------- type / IP ----------
@@ -106,14 +134,6 @@ customTypeInput.addEventListener('input', () => {
   chrome.storage.sync.set({ savedCustomType: customTypeInput.value });
 });
 
-function saveIpToHistory(ipVal) {
-  if (!ipVal) return;
-  chrome.storage.sync.set({ savedIp: ipVal });
-  if (!savedIpHistory.includes(ipVal)) {
-    savedIpHistory.push(ipVal);
-    chrome.storage.sync.set({ ipHistory: savedIpHistory });
-  }
-}
 
 // Generic dropdown autocomplete used for IP, Brand and Niche
 function attachAutocomplete(input, dropdown, getOptions, onPick) {
@@ -143,10 +163,6 @@ function attachAutocomplete(input, dropdown, getOptions, onPick) {
   input.addEventListener('blur', () => { dropdown.classList.add('hidden'); onPick(input.value.trim()); });
 }
 
-attachAutocomplete(ipInput, $('ip-dropdown'), () => savedIpHistory, (v, typing) => {
-  if (typing) chrome.storage.sync.set({ savedIp: v });
-  else saveIpToHistory(v);
-});
 attachAutocomplete(brandInput, $('brand-dropdown'), () => Object.keys(taxonomy.brands).sort(), (v) => {
   chrome.storage.sync.set({ savedBrand: v });
 });
@@ -203,6 +219,7 @@ function renderFestiveChips() {
     const name = add.value.trim();
     if (!name) return;
     taxonomy = await registerTaxonomy({ festive: [name] });
+    if (teamOn()) saveFestiveList(taxonomy.festive).catch(() => {});
     const canon = taxonomy.festive.find(x => x.name.toLowerCase() === name.toLowerCase()).name;
     if (!selectedFestive.includes(canon)) selectedFestive.push(canon);
     chrome.storage.sync.set({ savedFestive: selectedFestive });
@@ -212,55 +229,6 @@ function renderFestiveChips() {
 }
 
 // ---------- YouTube ----------
-
-const yt = (path) => fetch(`https://www.googleapis.com/youtube/v3/${path}&key=${YOUTUBE_API_KEY}`).then(r => r.json());
-
-function parseYouTubeUrl(raw) {
-  const u = new URL(raw);
-  const path = u.pathname;
-  let m;
-  if (u.hostname.includes('youtu.be')) return { videoId: path.split('/')[1] };
-  if ((m = path.match(/^\/shorts\/([\w-]{6,})/))) return { videoId: m[1], kind: 'short' };
-  if ((m = path.match(/^\/live\/([\w-]{6,})/))) return { videoId: m[1] };
-  if (path === '/watch' && u.searchParams.get('v')) return { videoId: u.searchParams.get('v') };
-  if ((m = path.match(/^\/@([^/]+)/))) return { handle: decodeURIComponent(m[1]) };
-  if ((m = path.match(/^\/channel\/([\w-]+)/))) return { channelId: m[1] };
-  if ((m = path.match(/^\/user\/([^/]+)/))) return { legacyUser: m[1] };
-  return {};
-}
-
-async function fetchChannel({ handle, channelId, legacyUser }) {
-  const q = handle ? `forHandle=${encodeURIComponent(handle)}`
-    : channelId ? `id=${channelId}` : `forUsername=${encodeURIComponent(legacyUser)}`;
-  const d1 = await yt(`channels?part=snippet,statistics,contentDetails&${q}`);
-  if (!d1.items || !d1.items.length) return null;
-  const ch = d1.items[0];
-  const subs = parseInt(ch.statistics.subscriberCount) || 0;
-
-  let avgViews = 0;
-  const uploads = ch.contentDetails.relatedPlaylists.uploads;
-  if (uploads) {
-    const d2 = await yt(`playlistItems?part=contentDetails&playlistId=${uploads}&maxResults=10`);
-    if (d2.items && d2.items.length) {
-      const ids = d2.items.map(i => i.contentDetails.videoId).join(',');
-      const d3 = await yt(`videos?part=statistics&id=${ids}`);
-      if (d3.items && d3.items.length) {
-        avgViews = Math.round(d3.items.reduce((s, v) => s + (parseInt(v.statistics.viewCount) || 0), 0) / d3.items.length);
-      }
-    }
-  }
-  return {
-    platform: 'YouTube',
-    username: ch.snippet.customUrl || ch.id,
-    name: ch.snippet.title,
-    followers: subs,
-    category: '--',
-    url: `https://youtube.com/${ch.snippet.customUrl || ('channel/' + ch.id)}`,
-    avatarUrl: ((ch.snippet.thumbnails || {}).high || (ch.snippet.thumbnails || {}).medium || (ch.snippet.thumbnails || {}).default || {}).url || '',
-    avgViews,
-    country: ch.snippet.country || '--'
-  };
-}
 
 async function handleYouTubeFetch(tab) {
   if (!YOUTUBE_API_KEY) return fail('Add a YouTube API key to fetch channels.');
@@ -420,8 +388,6 @@ sendBtn.addEventListener('click', async () => {
   if (!current) return fail('Fetch a page first.');
   const { creator, content } = current;
   const type = typeSelect.value === 'Others' ? customTypeInput.value.trim() : typeSelect.value;
-  const ip = ipInput.value.trim();
-  saveIpToHistory(ip);
 
   const brand = brandInput.value.trim();
   const niche = nicheInput.value.trim();
@@ -439,7 +405,6 @@ sendBtn.addEventListener('click', async () => {
     category: creator.category || '--',
     tier: calculateTier(creator.followers).name,
     type,
-    ip,
     url: creator.url,
     avgViews: creator.avgViews || '--',
     country: creator.country || '--',
@@ -455,25 +420,22 @@ sendBtn.addEventListener('click', async () => {
     postedAt: content ? content.postedAt : '',
     brand,
     niche,
-    festive: selectedFestive.slice()
+    festive: selectedFestive.slice(),
+    savedBy
   };
 
   sendBtn.innerText = 'Saving...';
   try {
-    const { record: saved, updated } = await upsertRecord(record);
+    const { record: saved, updated, offline } = await upsertRecord(record);
     taxonomy = await getTaxonomy();
 
-    // Master database (Make.com) — same webhook as before, fire-and-forget
-    if (MASTER_WEBHOOK_URL) {
-      const { thumb, avatar, id, exportedAt, ...payload } = saved;
-      fetch(MASTER_WEBHOOK_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...payload, festive: (saved.festive || []).join(', ') })
-      }).catch(err => console.log('Master DB silent fail:', err));
-    }
+    // Master database (Make.com) — same webhook and fields as before
+    sendToMaster(saved);
 
-    showStatus(updated ? 'Already saved, so the row was updated.' : 'Saved to the sheet and the moodboard.', 'success-text');
+    showStatus(offline ? 'Saved on this browser. It uploads to the team board once it can connect.'
+      : updated ? 'Already saved, so the row was updated.'
+      : brand ? `Saved to ${brand} on the moodboard and the sheet.` : 'Saved to the sheet and the moodboard.', 'success-text');
+    renderTeamState();
     setDot('green');
     updateSavedCount();
   } catch (e) {

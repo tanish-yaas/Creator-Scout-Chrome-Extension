@@ -29,9 +29,10 @@
     <div class="more-wrap">
       <button id="more" class="ghost icon" aria-label="More actions" aria-haspopup="true">···</button>
       <div id="more-menu" class="menu hidden" role="menu">
+        <button id="open-team-sheet" role="menuitem" class="hidden">Open the team Google Sheet ↗</button>
         <button id="open-gsheet" role="menuitem">Open a new Google Sheet ↗</button>
         <button id="mark-copied" role="menuitem">Mark all as copied</button>
-        <button id="delete-all" role="menuitem" class="danger">Delete all rows</button>
+        <button id="delete-all" role="menuitem" class="danger">Delete all rows (for everyone)</button>
       </div>
     </div>
   </div>
@@ -49,6 +50,7 @@
 
   <div id="toast" class="toast" role="status"></div>
 
+  <script src="config.js"></script>
   <script src="db.js"></script>
   <script src="sheet.js"></script>
 </body>

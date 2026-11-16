@@ -9,7 +9,7 @@ const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': 
 
 // Columns you can edit in place, mapped to the record field they change
 const EDITABLE = {
-  'Name': 'name', 'Category': 'category', 'Type': 'type', 'IP': 'ip',
+  'Name': 'name', 'Category': 'category', 'Type': 'type',
   'Country': 'country', 'Brand': 'brand', 'Niche': 'niche', 'Festive Tags': 'festive'
 };
 const NUMERIC = new Set(['Followers', 'Avg Views (10)', 'Content Views', 'Content Likes']);
@@ -77,15 +77,17 @@ $('tbody').addEventListener('focusout', async e => {
   const value = key === 'festive' ? text.split(',').map(s => s.trim()).filter(Boolean) : text;
   const before = key === 'festive' ? (r.festive || []).join(', ') : (r[key] || '');
   if ((key === 'festive' ? value.join(', ') : value) === before) return;
-  await updateRecord(r.id, { [key]: value, exportedAt: null });
-  toast('Saved');
+  try {
+    await updateRecord(r.id, { [key]: value, exportedAt: null });
+    toast('Saved');
+  } catch (err) { toast('Couldn\'t save to the team board: ' + err.message); load(); }
 });
 $('tbody').addEventListener('click', async e => {
   const b = e.target.closest('[data-del]');
   if (!b) return;
   if (b.dataset.confirm !== '1') { b.dataset.confirm = '1'; b.textContent = 'Delete?'; b.classList.add('confirm'); return; }
-  await deleteRecord(b.dataset.del);
-  toast('Row deleted');
+  try { await deleteRecord(b.dataset.del); toast('Row deleted'); }
+  catch (err) { toast('Couldn\'t delete on the team board: ' + err.message); }
 });
 
 // ---------- copy & export ----------
@@ -124,7 +126,11 @@ $('mark-copied').addEventListener('click', async () => { await markExported(rows
 $('delete-all').addEventListener('click', async () => {
   const b = $('delete-all');
   if (b.dataset.confirm !== '1') { b.dataset.confirm = '1'; b.textContent = 'Click again to delete every row'; return; }
-  await setRecords([]);
+  if (teamOn()) {
+    for (const r of rows) { try { await deleteRecord(r.id); } catch (err) { /* keep going */ } }
+  } else {
+    await setRecords([]);
+  }
   b.dataset.confirm = ''; b.textContent = 'Delete all rows';
   $('more-menu').classList.add('hidden');
   toast('All rows deleted');
@@ -142,3 +148,10 @@ function toast(msg) {
 }
 
 load();
+startTeamSync();
+getTeamInfo().then(info => {
+  if (teamOn() && info.sheetUrl) {
+    $('open-team-sheet').classList.remove('hidden');
+    $('open-team-sheet').addEventListener('click', () => window.open(info.sheetUrl, '_blank'));
+  }
+});

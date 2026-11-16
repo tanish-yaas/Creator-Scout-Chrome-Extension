@@ -9,36 +9,43 @@
     <header>
       <div class="brand">
         <div id="status-dot" class="brand-dot"></div>
-        <span>Creator Scout v2.0</span>
+        <span>Creator Scout v3.0</span>
       </div>
+      <button id="open-moodboard" class="btn-ghost btn-sm" title="Open the moodboard in a new tab">Moodboard ↗</button>
     </header>
-    <main>
-      <section class="surface">
-        <label for="sheet-url">Database Endpoint</label>
-        <div class="input-row">
-          <input type="text" id="sheet-url" placeholder="https://script.google.com/...">
-          <button id="save-url-btn" class="btn-ghost">Save</button>
-        </div>
-      </section>
 
-      <!-- PLATFORM TOGGLE -->
+    <div class="view-tabs" role="tablist">
+      <button id="tab-scout" class="active" role="tab">Scout</button>
+      <button id="tab-saved" role="tab">Saved <span id="saved-count" class="count-badge">0</span></button>
+    </div>
+
+    <!-- ================= SCOUT VIEW ================= -->
+    <main id="view-scout">
       <div class="platform-toggle">
         <button id="toggle-ig" class="active">Instagram</button>
         <button id="toggle-yt">YouTube</button>
       </div>
 
       <section class="surface">
+        <button id="fetch-btn" class="btn-secondary">Fetch page data</button>
+        <p class="hint">Works on a profile, channel, reel, post, short or video.</p>
 
-        <button id="fetch-btn" class="btn-secondary">Fetch Profile Data</button>
-        
+        <!-- Content preview (reels / posts / shorts / videos) -->
+        <div id="content-preview" class="content-preview hidden">
+          <img id="prev-thumb" alt="">
+          <div class="content-meta">
+            <span id="prev-content-kind" class="kind-tag">Reel</span>
+            <p id="prev-caption" class="caption"></p>
+            <p id="prev-content-stats" class="content-stats"></p>
+          </div>
+        </div>
+
         <div id="preview-box" class="data-grid">
           <div class="data-row"><span class="label">Name</span><span class="value" id="prev-name">--</span></div>
           <div class="data-row"><span class="label">Handle</span><span class="value" id="prev-handle">--</span></div>
           <div class="data-row"><span class="label" id="label-followers">Followers</span><span class="value" id="prev-followers">--</span></div>
           <div class="data-row"><span class="label">Tier</span><span class="pill" id="prev-tier">--</span></div>
           <div class="data-row ig-only"><span class="label">Category</span><span class="value" id="prev-category">--</span></div>
-          
-          <!-- YT ONLY STATS -->
           <div class="data-row yt-only hidden"><span class="label">Avg Views (10)</span><span class="value" id="prev-views">--</span></div>
         </div>
 
@@ -71,12 +78,52 @@
             <ul id="ip-dropdown" class="autocomplete-dropdown hidden"></ul>
           </div>
         </div>
-        <input type="text" id="custom-type" class="hidden" placeholder="Enter custom type..." style="margin-bottom: 4px;">
-        <button id="send-btn" class="btn-primary">Push to Sheet</button>
+        <input type="text" id="custom-type" class="hidden" placeholder="Enter custom type...">
+
+        <!-- Moodboard tagging -->
+        <div id="moodboard-fields" class="moodboard-fields hidden">
+          <div class="input-row-multi">
+            <div class="manual-input-group" style="flex: 1; position: relative;">
+              <label for="mb-brand">Brand</label>
+              <input type="text" id="mb-brand" placeholder="e.g. Nykaa" autocomplete="off">
+              <ul id="brand-dropdown" class="autocomplete-dropdown hidden"></ul>
+            </div>
+            <div class="manual-input-group" style="flex: 1; position: relative;">
+              <label for="mb-niche">Niche</label>
+              <input type="text" id="mb-niche" placeholder="e.g. GRWM" autocomplete="off">
+              <ul id="niche-dropdown" class="autocomplete-dropdown hidden"></ul>
+            </div>
+          </div>
+          <div class="manual-input-group">
+            <label>Festive tags</label>
+            <div id="festive-chips" class="chip-row"></div>
+          </div>
+        </div>
+
+        <button id="send-btn" class="btn-primary">Save</button>
       </section>
     </main>
-    <footer><p id="status-msg">System Ready</p></footer>
+
+    <!-- ================= SAVED VIEW ================= -->
+    <main id="view-saved" class="hidden">
+      <section class="surface">
+        <p id="saved-summary" class="saved-summary">Nothing saved yet.</p>
+        <button id="copy-new-btn" class="btn-primary">Copy new rows</button>
+        <div class="btn-pair">
+          <button id="copy-all-btn" class="btn-secondary">Copy all + headers</button>
+          <button id="csv-btn" class="btn-secondary">Download CSV</button>
+        </div>
+        <button id="open-sheets-btn" class="btn-ghost btn-block">Open a new Google Sheet</button>
+        <p class="hint">Copied rows paste straight into any Google Sheet or Excel file with Ctrl/⌘ + V.</p>
+      </section>
+      <ul id="saved-list" class="saved-list"></ul>
+      <button id="clear-btn" class="btn-danger-ghost hidden">Delete all saved rows</button>
+    </main>
+
+    <footer><p id="status-msg">System ready</p></footer>
   </div>
+  <script src="db.js"></script>
+  <script src="scraper.js"></script>
   <script src="popup.js"></script>
 </body>
 </html>

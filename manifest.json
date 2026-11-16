@@ -1,21 +1,23 @@
 {
   "manifest_version": 3,
   "name": "Creator Scout",
-  "version": "2.0",
-  "description": "Scout and save Instagram and YouTube creators to your Database.",
+  "version": "3.0",
+  "description": "Scout Instagram and YouTube creators and reels, keep them in the extension, copy to Sheets, and moodboard them by brand.",
   "action": {
     "default_popup": "popup.html"
   },
   "permissions": [
     "activeTab",
     "scripting",
-    "storage"
+    "storage",
+    "unlimitedStorage"
   ],
   "host_permissions": [
     "*://*.instagram.com/*",
-    "https://script.google.com/*",
+    "*://*.cdninstagram.com/*",
+    "*://*.fbcdn.net/*",
+    "https://i.ytimg.com/*",
     "https://*.make.com/*",
-    "https://*.zapier.com/*",
     "https://www.googleapis.com/*"
   ]
 }

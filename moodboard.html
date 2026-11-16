@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Moodboard · Creator Scout</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="moodboard.css">
+</head>
+<body>
+  <aside class="rail">
+    <div class="rail-head">
+      <span class="rail-dot"></span>
+      <div>
+        <p class="rail-title">Moodboard</p>
+        <p class="rail-sub">Creator Scout</p>
+      </div>
+    </div>
+
+    <nav class="rail-nav" id="rail-nav" aria-label="Brands and niches"></nav>
+
+    <form id="new-brand-form" class="new-brand">
+      <input id="new-brand-input" type="text" placeholder="New brand" aria-label="New brand name">
+    </form>
+
+    <p class="rail-help">Drag a frame onto a brand or niche to move it. Double-click a name to rename it.</p>
+  </aside>
+
+  <main class="table">
+    <div class="toolbar">
+      <input id="search" type="search" placeholder="Search creators, captions, IPs" aria-label="Search">
+      <div class="seg" role="group" aria-label="Platform">
+        <button data-platform="all" class="on">All</button>
+        <button data-platform="Instagram">Instagram</button>
+        <button data-platform="YouTube">YouTube</button>
+      </div>
+      <select id="sort" aria-label="Sort">
+        <option value="new">Newest first</option>
+        <option value="views">Most viewed</option>
+        <option value="followers">Biggest creators</option>
+      </select>
+      <button id="copy-links" class="tool-btn">Copy links</button>
+    </div>
+
+    <div id="festive-filter" class="festive-filter" aria-label="Filter by festive tag"></div>
+
+    <div id="board" class="board"></div>
+  </main>
+
+  <aside id="drawer" class="drawer" aria-hidden="true">
+    <button id="drawer-close" class="drawer-close" aria-label="Close">×</button>
+    <div id="drawer-body"></div>
+  </aside>
+
+  <div id="toast" class="toast" role="status"></div>
+
+  <script src="db.js"></script>
+  <script src="moodboard.js"></script>
+</body>
+</html>

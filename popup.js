@@ -26,7 +26,7 @@ let savedIpHistory = [];
 let taxonomy = { brands: {}, festive: [] };
 let selectedFestive = [];
 let festiveExpanded = false;
-const FESTIVE_VISIBLE = 6;
+const FESTIVE_VISIBLE = 4;
 
 // ---------- status ----------
 
@@ -360,19 +360,22 @@ async function handleInstagramFetch(tab) {
 
 function updateUI({ creator, content }) {
   const tier = calculateTier(creator.followers);
-  $('prev-name').innerText = creator.name || '--';
-  $('prev-handle').innerText = creator.username || '--';
+  $('preview-empty').classList.add('hidden');
+  $('preview').classList.remove('hidden');
+  const handle = String(creator.username || '--').replace(/^@/, '');
+  $('prev-handle').innerText = (creator.platform === 'Instagram' ? '@' : '') + handle;
+  $('prev-name').innerText = creator.name && creator.name !== creator.username ? creator.name : '';
   $('prev-followers').innerText = formatCount(creator.followers);
   $('prev-category').innerText = creator.category || '--';
   $('prev-views').innerText = formatCount(creator.avgViews);
   const tierEl = $('prev-tier');
   tierEl.innerText = tier.name;
-  tierEl.className = 'pill ' + tier.class;
+  tierEl.className = 'tier ' + tier.class;
 
   const box = $('content-preview');
   if (content) {
     box.classList.remove('hidden');
-    $('prev-thumb').src = content.thumb || content.thumbUrl || '';
+    $('prev-thumb').src = $('prev-thumb-tone').src = content.thumb || content.thumbUrl || '';
     $('prev-content-kind').innerText = { reel: 'Reel', post: 'Post', short: 'Short', video: 'Video' }[content.kind] || 'Content';
     $('prev-caption').innerText = content.caption || 'No caption';
     const bits = [];
@@ -410,7 +413,7 @@ fetchBtn.addEventListener('click', async () => {
     if (current.content && current.content.thumbUrl) {
       const ref = current;
       thumbToDataUrl(current.content.thumbUrl).then(d => {
-        if (current === ref) { ref.content.thumb = d; $('prev-thumb').src = d; }
+        if (current === ref) { ref.content.thumb = d; $('prev-thumb').src = $('prev-thumb-tone').src = d; }
       });
     }
   } catch (e) {
@@ -513,9 +516,9 @@ async function renderSaved() {
   list.innerHTML = '';
   records.slice(0, 40).forEach(r => {
     const li = document.createElement('li');
-    li.className = 'saved-item' + (r.exportedAt ? '' : ' is-new');
+    li.className = 'saved-item';
     const thumb = r.thumb
-      ? `<img src="${r.thumb}" alt="">`
+      ? `<span class="mini"><img src="${r.thumb}" alt=""></span>`
       : `<span class="avatar">${(r.username || '?').replace(/^@/, '').charAt(0).toUpperCase()}</span>`;
     const where = [r.brand, r.niche].filter(Boolean).join(' / ');
     li.innerHTML = `${thumb}
@@ -523,8 +526,9 @@ async function renderSaved() {
         <span class="saved-handle"></span>
         <span class="saved-sub"></span>
       </div>
+      ${r.exportedAt ? '' : '<span class="new-dot" title="Not copied to a sheet yet"></span>'}
       <button class="del" title="Delete this row">×</button>`;
-    li.querySelector('.saved-handle').innerText = (r.platform === 'YouTube' ? '▶ ' : '') + (r.username || r.name);
+    li.querySelector('.saved-handle').innerText = (r.platform === 'Instagram' ? '@' : '') + String(r.username || r.name).replace(/^@/, '');
     li.querySelector('.saved-sub').innerText = where || `${formatCount(r.followers)} ${r.platform === 'YouTube' ? 'subs' : 'followers'}`;
     li.querySelector('.del').addEventListener('click', async () => {
       await deleteRecord(r.id);

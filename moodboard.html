@@ -4,55 +4,43 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Moodboard · Creator Scout</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="fonts/fonts.css">
   <link rel="stylesheet" href="moodboard.css">
 </head>
 <body>
-  <aside class="rail">
-    <div class="rail-head">
-      <span class="rail-dot"></span>
-      <div>
-        <p class="rail-title">Moodboard</p>
-        <p class="rail-sub">Creator Scout</p>
+  <nav class="top">
+    <a class="mark" href="#" id="home-link"><span class="dot"></span>Creator Scout</a>
+    <div class="top-actions">
+      <div id="layout-toggle" class="seg hidden" role="group" aria-label="Layout">
+        <button data-layout="carousel" class="on">Carousel</button>
+        <button data-layout="grid">Grid</button>
       </div>
+      <button id="copy-links" class="ghost-btn">Copy links</button>
     </div>
+  </nav>
 
-    <nav class="rail-nav" id="rail-nav" aria-label="Brands and niches"></nav>
+  <header class="hero">
+    <button id="back" class="back hidden">← All brands</button>
+    <h1 id="title" class="title"></h1>
+    <p id="sub" class="sub"></p>
+    <label class="search glow-pill">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M16 16l4.5 4.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+      <input id="search" type="search" placeholder="Search brands, creators, captions" aria-label="Search" autocomplete="off">
+    </label>
+    <div id="filters" class="filters"></div>
+  </header>
 
-    <form id="new-brand-form" class="new-brand">
-      <input id="new-brand-input" type="text" placeholder="New brand" aria-label="New brand name">
-    </form>
+  <section id="stage" class="stage" aria-roledescription="carousel">
+    <div class="halo" aria-hidden="true"></div>
+    <button class="arrow prev" id="prev" aria-label="Previous">←</button>
+    <div id="ring" class="ring"></div>
+    <button class="arrow next" id="next" aria-label="Next">→</button>
+    <p id="counter" class="counter"></p>
+  </section>
 
-    <p class="rail-help">Drag a frame onto a brand or niche to move it. Double-click a name to rename it.</p>
-  </aside>
+  <section id="grid" class="grid hidden"></section>
 
-  <main class="table">
-    <div class="toolbar">
-      <input id="search" type="search" placeholder="Search creators, captions, IPs" aria-label="Search">
-      <div class="seg" role="group" aria-label="Platform">
-        <button data-platform="all" class="on">All</button>
-        <button data-platform="Instagram">Instagram</button>
-        <button data-platform="YouTube">YouTube</button>
-      </div>
-      <select id="sort" aria-label="Sort">
-        <option value="new">Newest first</option>
-        <option value="views">Most viewed</option>
-        <option value="followers">Biggest creators</option>
-      </select>
-      <button id="copy-links" class="tool-btn">Copy links</button>
-    </div>
-
-    <div id="festive-filter" class="festive-filter" aria-label="Filter by festive tag"></div>
-
-    <div id="board" class="board"></div>
-  </main>
-
-  <aside id="drawer" class="drawer" aria-hidden="true">
-    <button id="drawer-close" class="drawer-close" aria-label="Close">×</button>
-    <div id="drawer-body"></div>
-  </aside>
+  <section id="info" class="info"></section>
 
   <div id="toast" class="toast" role="status"></div>
 

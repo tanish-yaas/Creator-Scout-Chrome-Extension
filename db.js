@@ -93,7 +93,7 @@ async function registerTaxonomy({ brand, niche, festive }) {
     tax.brands[brand] = tax.brands[brand] || [];
     if (niche && !tax.brands[brand].includes(niche)) tax.brands[brand].push(niche);
   }
-  (festive || []).forEach(f => {
+  (festive || []).filter(Boolean).forEach(f => {
     if (!tax.festive.some(x => x.name.toLowerCase() === f.toLowerCase())) {
       tax.festive.push({ name: f, emoji: '✨', color: TAPE_FALLBACK_COLORS[tax.festive.length % TAPE_FALLBACK_COLORS.length] });
     }

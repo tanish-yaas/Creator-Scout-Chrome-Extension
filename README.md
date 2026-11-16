@@ -1,4 +1,4 @@
-# Creator Scout v3.0 🕵️‍♂️
+# Creator Scout v3.1 🕵️‍♂️
 
 Creator Scout is a Chrome extension for scouting Instagram and YouTube creators and their content. Everything you save stays inside the extension. You copy it into any Google Sheet when you want, it still syncs to the master database, and it lands on a moodboard grouped by brand and niche.
 
@@ -13,14 +13,13 @@ Creator Scout is a Chrome extension for scouting Instagram and YouTube creators 
   * **Download CSV** gives you a file to import or send.
   * **Open a new Google Sheet** opens sheets.new.
 * **Master database:** Every save is also sent to the Make.com master webhook, the same as before.
-* **Moodboard:** Click **Moodboard ↗** in the popup. Scouted reels and videos are pinned by **brand → niche**, with **festive tags** (Diwali, Holi, Navratri, Eid, Christmas and more, plus your own). You can:
-  * filter by festive tag, platform or search
-  * drag frames between brands and niches
-  * rename brands and niches with a double-click
-  * edit tags in the side panel
-  * copy the links in the current view for a client deck
-
-  It updates live while you scout.
+* **Moodboard:** Click **Moodboard ↗** in the popup.
+  * The home screen is a curved carousel with **one card per brand**. Side cards sit in halftone, and the middle card gets a green scan line that brings it into colour.
+  * You can drag, swipe, scroll or use the arrow keys, and the carousel loops. A search bar and festive / platform filters sit above it.
+  * Below the carousel are the brand's niches, festive tags and top creators.
+  * Opening a brand gives the same carousel for its reels, with niche filters, a grid view, and a details row where you can re-file a reel (brand, niche, festive tags) or remove it.
+  * Double-click a brand's title to rename it. **Copy links** copies the current view, grouped by brand and niche.
+  * It updates live while you scout.
 
 ## 📄 Sheet columns
 The first 12 match the old Apps Script sheet, so existing sheets keep lining up:
@@ -41,5 +40,6 @@ Each save POSTs JSON to `MASTER_WEBHOOK_URL` with the original fields (`platform
 | `scraper.js` | Injected into Instagram to read profiles, reels and posts |
 | `db.js` | Shared storage, sheet export and number helpers |
 | `moodboard.html / moodboard.js / moodboard.css` | The moodboard dashboard |
+| `fonts/` | Bundled Scout Pixel (headline font made for this extension) and Inter (SIL Open Font License) |
 
 Data is stored in `chrome.storage.local` on this browser. Thumbnails are saved as small copies, so they don't break when Instagram's image links expire.

@@ -2,57 +2,70 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <link rel="stylesheet" href="fonts/fonts.css">
   <link rel="stylesheet" href="popup.css">
 </head>
 <body>
-  <div class="app-wrapper">
-    <header>
+  <div class="app">
+    <header class="top">
       <div class="brand">
-        <div id="status-dot" class="brand-dot"></div>
-        <span>Creator Scout v3.0</span>
+        <span id="status-dot" class="brand-dot"></span>
+        <span class="brand-name">Creator Scout</span>
       </div>
-      <button id="open-moodboard" class="btn-ghost btn-sm" title="Open the moodboard in a new tab">Moodboard ↗</button>
+      <button id="open-moodboard" class="ghost" title="Open the moodboard in a new tab">Moodboard ↗</button>
     </header>
 
-    <div class="view-tabs" role="tablist">
+    <div class="tabs" role="tablist">
       <button id="tab-scout" class="active" role="tab">Scout</button>
-      <button id="tab-saved" role="tab">Saved <span id="saved-count" class="count-badge">0</span></button>
+      <button id="tab-saved" role="tab">Saved <span id="saved-count" class="count">0</span></button>
     </div>
 
-    <!-- ================= SCOUT VIEW ================= -->
-    <main id="view-scout">
-      <div class="platform-toggle">
-        <button id="toggle-ig" class="active">Instagram</button>
-        <button id="toggle-yt">YouTube</button>
+    <!-- ================= SCOUT ================= -->
+    <main id="view-scout" class="view">
+      <div class="fetch-row">
+        <div class="seg">
+          <button id="toggle-ig" class="active">Instagram</button>
+          <button id="toggle-yt">YouTube</button>
+        </div>
+        <button id="fetch-btn" class="fetch">Fetch page</button>
       </div>
 
-      <section class="surface">
-        <button id="fetch-btn" class="btn-secondary">Fetch page data</button>
-        <p class="hint">Works on a profile, channel, reel, post, short or video.</p>
+      <section id="preview-empty" class="empty-card">
+        <p class="pixel">Nothing fetched yet</p>
+        <p>Open a profile, channel, reel, post, short or video, then click Fetch page.</p>
+      </section>
 
-        <!-- Content preview (reels / posts / shorts / videos) -->
-        <div id="content-preview" class="content-preview hidden">
-          <img id="prev-thumb" alt="">
+      <section id="preview" class="card hidden">
+        <div id="content-preview" class="content hidden">
+          <div class="thumb">
+            <img id="prev-thumb" alt="">
+            <div class="thumb-tone"><img id="prev-thumb-tone" alt=""></div>
+            <span class="scan"></span>
+          </div>
           <div class="content-meta">
-            <span id="prev-content-kind" class="kind-tag">Reel</span>
+            <span id="prev-content-kind" class="kind">Reel</span>
             <p id="prev-caption" class="caption"></p>
-            <p id="prev-content-stats" class="content-stats"></p>
+            <p id="prev-content-stats" class="stats-line"></p>
           </div>
         </div>
 
-        <div id="preview-box" class="data-grid">
-          <div class="data-row"><span class="label">Name</span><span class="value" id="prev-name">--</span></div>
-          <div class="data-row"><span class="label">Handle</span><span class="value" id="prev-handle">--</span></div>
-          <div class="data-row"><span class="label" id="label-followers">Followers</span><span class="value" id="prev-followers">--</span></div>
-          <div class="data-row"><span class="label">Tier</span><span class="pill" id="prev-tier">--</span></div>
-          <div class="data-row ig-only"><span class="label">Category</span><span class="value" id="prev-category">--</span></div>
-          <div class="data-row yt-only hidden"><span class="label">Avg Views (10)</span><span class="value" id="prev-views">--</span></div>
+        <div class="who">
+          <p id="prev-handle" class="handle pixel">--</p>
+          <p id="prev-name" class="name">--</p>
         </div>
+        <div class="stats">
+          <div><span class="k" id="label-followers">Followers</span><span class="v" id="prev-followers">--</span></div>
+          <div><span class="k">Tier</span><span class="v"><span class="tier" id="prev-tier">--</span></span></div>
+          <div class="ig-only"><span class="k">Category</span><span class="v" id="prev-category">--</span></div>
+          <div class="yt-only hidden"><span class="k">Avg views (10)</span><span class="v" id="prev-views">--</span></div>
+        </div>
+      </section>
 
-        <div class="input-row-multi">
-          <div class="manual-input-group" style="flex: 3;">
+      <section class="fields">
+        <div class="row">
+          <div class="field" style="flex: 3;">
             <label for="creator-type">Type</label>
-            <select id="creator-type" class="custom-select">
+            <select id="creator-type">
               <option value="Beauty">Beauty</option>
               <option value="Business & Finance">Business & Finance</option>
               <option value="Cinematographer / Photographer">Cinematographer / Photographer</option>
@@ -72,55 +85,54 @@
               <option value="Others">Others</option>
             </select>
           </div>
-          <div class="manual-input-group" style="flex: 2; position: relative;">
-            <label for="creator-ip">IP (Manual)</label>
-            <input type="text" id="creator-ip" placeholder="Enter IP..." autocomplete="off">
-            <ul id="ip-dropdown" class="autocomplete-dropdown hidden"></ul>
+          <div class="field" style="flex: 2; position: relative;">
+            <label for="creator-ip">IP</label>
+            <input type="text" id="creator-ip" placeholder="Enter IP" autocomplete="off">
+            <ul id="ip-dropdown" class="dropdown hidden"></ul>
           </div>
         </div>
-        <input type="text" id="custom-type" class="hidden" placeholder="Enter custom type...">
+        <input type="text" id="custom-type" class="hidden" placeholder="Enter a custom type">
 
-        <!-- Moodboard tagging -->
-        <div id="moodboard-fields" class="moodboard-fields hidden">
-          <div class="input-row-multi">
-            <div class="manual-input-group" style="flex: 1; position: relative;">
+        <div id="moodboard-fields" class="hidden">
+          <div class="row">
+            <div class="field" style="flex: 1; position: relative;">
               <label for="mb-brand">Brand</label>
               <input type="text" id="mb-brand" placeholder="e.g. Nykaa" autocomplete="off">
-              <ul id="brand-dropdown" class="autocomplete-dropdown hidden"></ul>
+              <ul id="brand-dropdown" class="dropdown hidden"></ul>
             </div>
-            <div class="manual-input-group" style="flex: 1; position: relative;">
+            <div class="field" style="flex: 1; position: relative;">
               <label for="mb-niche">Niche</label>
               <input type="text" id="mb-niche" placeholder="e.g. GRWM" autocomplete="off">
-              <ul id="niche-dropdown" class="autocomplete-dropdown hidden"></ul>
+              <ul id="niche-dropdown" class="dropdown hidden"></ul>
             </div>
           </div>
-          <div class="manual-input-group">
+          <div class="field">
             <label>Festive tags</label>
-            <div id="festive-chips" class="chip-row"></div>
+            <div id="festive-chips" class="chips"></div>
           </div>
         </div>
-
-        <button id="send-btn" class="btn-primary">Save</button>
       </section>
+
+      <button id="send-btn" class="cta glow-pill">Save</button>
     </main>
 
-    <!-- ================= SAVED VIEW ================= -->
-    <main id="view-saved" class="hidden">
-      <section class="surface">
-        <p id="saved-summary" class="saved-summary">Nothing saved yet.</p>
-        <button id="copy-new-btn" class="btn-primary">Copy new rows</button>
-        <div class="btn-pair">
-          <button id="copy-all-btn" class="btn-secondary">Copy all + headers</button>
-          <button id="csv-btn" class="btn-secondary">Download CSV</button>
+    <!-- ================= SAVED ================= -->
+    <main id="view-saved" class="view hidden">
+      <section class="card saved-card">
+        <p id="saved-summary" class="summary">Nothing saved yet.</p>
+        <button id="copy-new-btn" class="cta glow-pill">Copy new rows</button>
+        <div class="row">
+          <button id="copy-all-btn" class="ghost wide">Copy all + headers</button>
+          <button id="csv-btn" class="ghost wide">Download CSV</button>
         </div>
-        <button id="open-sheets-btn" class="btn-ghost btn-block">Open a new Google Sheet</button>
+        <button id="open-sheets-btn" class="link">Open a new Google Sheet ↗</button>
         <p class="hint">Copied rows paste straight into any Google Sheet or Excel file with Ctrl/⌘ + V.</p>
       </section>
       <ul id="saved-list" class="saved-list"></ul>
-      <button id="clear-btn" class="btn-danger-ghost hidden">Delete all saved rows</button>
+      <button id="clear-btn" class="danger hidden">Delete all saved rows</button>
     </main>
 
-    <footer><p id="status-msg">System ready</p></footer>
+    <footer><p id="status-msg">Ready</p></footer>
   </div>
   <script src="db.js"></script>
   <script src="scraper.js"></script>

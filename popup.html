@@ -15,11 +15,6 @@
       <button id="open-moodboard" class="ghost" title="Open the moodboard in a new tab">Moodboard ↗</button>
     </header>
 
-    <div class="tabs" role="tablist">
-      <button id="tab-scout" class="active" role="tab">Scout</button>
-      <button id="tab-saved" role="tab">Saved <span id="saved-count" class="count">0</span></button>
-    </div>
-
     <!-- ================= SCOUT ================= -->
     <main id="view-scout" class="view">
       <div class="fetch-row">
@@ -114,22 +109,11 @@
       </section>
 
       <button id="send-btn" class="cta glow-pill">Save</button>
-    </main>
 
-    <!-- ================= SAVED ================= -->
-    <main id="view-saved" class="view hidden">
-      <section class="card saved-card">
-        <p id="saved-summary" class="summary">Nothing saved yet.</p>
-        <button id="copy-new-btn" class="cta glow-pill">Copy new rows</button>
-        <div class="row">
-          <button id="copy-all-btn" class="ghost wide">Copy all + headers</button>
-          <button id="csv-btn" class="ghost wide">Download CSV</button>
-        </div>
-        <button id="open-sheets-btn" class="link">Open a new Google Sheet ↗</button>
-        <p class="hint">Copied rows paste straight into any Google Sheet or Excel file with Ctrl/⌘ + V.</p>
-      </section>
-      <ul id="saved-list" class="saved-list"></ul>
-      <button id="clear-btn" class="danger hidden">Delete all saved rows</button>
+      <button id="open-sheet" class="sheet-row">
+        <span class="sheet-label">Open sheet</span>
+        <span id="sheet-count" class="sheet-count">0 creators</span>
+      </button>
     </main>
 
     <footer><p id="status-msg">Ready</p></footer>

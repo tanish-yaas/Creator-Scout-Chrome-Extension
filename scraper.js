@@ -123,6 +123,7 @@ async function scoutScrapeInstagram() {
       const pm = parseProfileMeta(decode(meta(pdoc, 'og:description') || meta(pdoc, 'description')));
       creator.name = pm.name || '';
       creator.followers = pm.followers || '';
+      creator.avatarUrl = meta(pdoc, 'og:image');
     }
     return { kind: 'content', creator, content };
   }
@@ -137,8 +138,17 @@ async function scoutScrapeInstagram() {
     category: h.category || '',
     url: `https://www.instagram.com/${username}/`
   };
+  // Fresh copy of the profile page for the profile picture (and stats, if the header didn't have them)
+  const pdoc = await fetchDoc(`/${username}/`);
+  const liveFresh = meta(document, 'og:url').toLowerCase().includes(`/${username.toLowerCase()}/`);
+  const src = meta(pdoc, 'og:description') ? pdoc : (liveFresh ? document : null);
+  creator.avatarUrl = meta(src, 'og:image');
+  if (!creator.avatarUrl) {
+    const img = document.querySelector('header img[alt*="profile picture" i], header img');
+    if (img) creator.avatarUrl = img.src;
+  }
   if (!creator.followers || !creator.name) {
-    const pm = parseProfileMeta(decode(meta(document, 'og:description') || meta(document, 'description')));
+    const pm = parseProfileMeta(decode(meta(src, 'og:description') || meta(src, 'description')));
     creator.followers = creator.followers || pm.followers || '';
     creator.name = creator.name || pm.name || '';
   }

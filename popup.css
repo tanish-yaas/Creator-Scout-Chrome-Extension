@@ -219,3 +219,21 @@ footer { text-align: center; }
 #status-msg { margin: 0; font-size: 11px; color: var(--mute); }
 .success-text { color: var(--acid) !important; }
 .error-text { color: #ff6b6b !important; }
+
+/* ---------- sheet shortcut ---------- */
+
+.sheet-row {
+  display: flex; align-items: center; justify-content: space-between;
+  width: 100%; padding: 11px 14px;
+  border: 1px solid var(--line); border-radius: 12px;
+  background: rgba(255, 255, 255, 0.02);
+}
+.sheet-row:hover { border-color: var(--line-strong); }
+.sheet-label { font-size: 13px; font-weight: 500; display: flex; align-items: center; gap: 8px; }
+.sheet-label::before {
+  content: ""; width: 14px; height: 14px; border-radius: 3px;
+  border: 1.5px solid var(--dim);
+  background: linear-gradient(var(--dim), var(--dim)) 0 4px / 100% 1.5px no-repeat, linear-gradient(var(--dim), var(--dim)) 4px 0 / 1.5px 100% no-repeat;
+}
+.sheet-count { font-family: var(--pixel); font-size: 12px; color: var(--dim); }
+.sheet-count.has-new { color: var(--acid); }

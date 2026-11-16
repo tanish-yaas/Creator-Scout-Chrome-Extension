@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Creator list · Creator Scout</title>
+  <link rel="stylesheet" href="fonts/fonts.css">
+  <link rel="stylesheet" href="sheet.css">
+</head>
+<body>
+  <header class="head">
+    <div>
+      <a class="mark" id="to-moodboard" href="moodboard.html"><span class="dot"></span>Creator Scout</a>
+      <h1 class="title">Creator list</h1>
+      <p id="sub" class="sub"></p>
+    </div>
+    <a class="ghost" href="moodboard.html">Moodboard ↗</a>
+  </header>
+
+  <div class="toolbar">
+    <button id="copy-sheets" class="primary glow-pill">Copy for Google Sheets</button>
+    <button id="copy-new" class="ghost">Copy new rows</button>
+    <span class="divider"></span>
+    <button id="export-xlsx" class="ghost">Export Excel</button>
+    <button id="export-csv" class="ghost">Export CSV</button>
+    <label class="search">
+      <input id="search" type="search" placeholder="Filter rows" aria-label="Filter rows">
+    </label>
+    <div class="more-wrap">
+      <button id="more" class="ghost icon" aria-label="More actions" aria-haspopup="true">···</button>
+      <div id="more-menu" class="menu hidden" role="menu">
+        <button id="open-gsheet" role="menuitem">Open a new Google Sheet ↗</button>
+        <button id="mark-copied" role="menuitem">Mark all as copied</button>
+        <button id="delete-all" role="menuitem" class="danger">Delete all rows</button>
+      </div>
+    </div>
+  </div>
+
+  <main class="table-wrap">
+    <table id="table">
+      <thead id="thead"></thead>
+      <tbody id="tbody"></tbody>
+    </table>
+    <div id="empty" class="empty hidden">
+      <p class="pixel">No creators yet</p>
+      <p>Open a profile, reel or short, click Creator Scout, then Fetch page and Save. Rows show up here straight away.</p>
+    </div>
+  </main>
+
+  <div id="toast" class="toast" role="status"></div>
+
+  <script src="db.js"></script>
+  <script src="sheet.js"></script>
+</body>
+</html>

@@ -42,20 +42,11 @@ function fail(text) {
   setDot('');
 }
 
-// ---------- view tabs ----------
-
-function showView(name) {
-  $('view-scout').classList.toggle('hidden', name !== 'scout');
-  $('view-saved').classList.toggle('hidden', name !== 'saved');
-  $('tab-scout').classList.toggle('active', name === 'scout');
-  $('tab-saved').classList.toggle('active', name === 'saved');
-  if (name === 'saved') renderSaved();
-}
-$('tab-scout').addEventListener('click', () => showView('scout'));
-$('tab-saved').addEventListener('click', () => showView('saved'));
-
 $('open-moodboard').addEventListener('click', () => {
   chrome.tabs.create({ url: chrome.runtime.getURL('moodboard.html') });
+});
+$('open-sheet').addEventListener('click', () => {
+  chrome.tabs.create({ url: chrome.runtime.getURL('sheet.html') });
 });
 
 // ---------- platform ----------
@@ -265,6 +256,7 @@ async function fetchChannel({ handle, channelId, legacyUser }) {
     followers: subs,
     category: '--',
     url: `https://youtube.com/${ch.snippet.customUrl || ('channel/' + ch.id)}`,
+    avatarUrl: ((ch.snippet.thumbnails || {}).high || (ch.snippet.thumbnails || {}).medium || (ch.snippet.thumbnails || {}).default || {}).url || '',
     avgViews,
     country: ch.snippet.country || '--'
   };
@@ -337,6 +329,7 @@ async function handleInstagramFetch(tab) {
     followers,
     category,
     url: res.creator.url,
+    avatarUrl: res.creator.avatarUrl || '',
     avgViews: '--',
     country: '--'
   };
@@ -388,7 +381,7 @@ function updateUI({ creator, content }) {
     box.classList.add('hidden');
     sendBtn.innerText = 'Save creator';
   }
-  $('moodboard-fields').classList.toggle('hidden', !content);
+  $('moodboard-fields').classList.remove('hidden');
 }
 
 fetchBtn.addEventListener('click', async () => {
@@ -430,18 +423,13 @@ sendBtn.addEventListener('click', async () => {
   const ip = ipInput.value.trim();
   saveIpToHistory(ip);
 
-  const brand = content ? brandInput.value.trim() : '';
-  const niche = content ? nicheInput.value.trim() : '';
-  if (content && !brand) {
-    brandInput.focus();
-    return fail('Pick a brand so this lands on the moodboard.');
-  }
+  const brand = brandInput.value.trim();
+  const niche = nicheInput.value.trim();
 
-  // Make sure the permanent thumbnail is ready before saving
-  if (content && !content.thumb && content.thumbUrl) {
-    sendBtn.innerText = 'Saving...';
-    content.thumb = await thumbToDataUrl(content.thumbUrl);
-  }
+  // Make sure permanent copies of the thumbnail / profile picture are ready before saving
+  sendBtn.innerText = 'Saving...';
+  if (content && !content.thumb && content.thumbUrl) content.thumb = await thumbToDataUrl(content.thumbUrl);
+  if (creator.avatarUrl && !creator.avatar) creator.avatar = await thumbToDataUrl(creator.avatarUrl, 240);
 
   const record = {
     platform: creator.platform,
@@ -457,8 +445,9 @@ sendBtn.addEventListener('click', async () => {
     country: creator.country || '--',
     contentUrl: content ? content.url : '',
     contentKind: content ? content.kind : '',
-    thumb: content ? (content.thumb || content.thumbUrl || '') : '',
-    thumbUrl: content ? content.thumbUrl : '',
+    thumb: content ? (content.thumb || content.thumbUrl || '') : (creator.avatar || ''),
+    thumbUrl: content ? content.thumbUrl : (creator.avatarUrl || ''),
+    avatar: creator.avatar || '',
     caption: content ? content.caption : '',
     contentViews: content ? content.views : 0,
     contentLikes: content ? content.likes : 0,
@@ -466,7 +455,7 @@ sendBtn.addEventListener('click', async () => {
     postedAt: content ? content.postedAt : '',
     brand,
     niche,
-    festive: content ? selectedFestive.slice() : []
+    festive: selectedFestive.slice()
   };
 
   sendBtn.innerText = 'Saving...';
@@ -476,7 +465,7 @@ sendBtn.addEventListener('click', async () => {
 
     // Master database (Make.com) — same webhook as before, fire-and-forget
     if (MASTER_WEBHOOK_URL) {
-      const { thumb, id, exportedAt, ...payload } = saved;
+      const { thumb, avatar, id, exportedAt, ...payload } = saved;
       fetch(MASTER_WEBHOOK_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -484,7 +473,7 @@ sendBtn.addEventListener('click', async () => {
       }).catch(err => console.log('Master DB silent fail:', err));
     }
 
-    showStatus(updated ? 'Already saved, so the row was updated.' : (content ? 'Saved to moodboard.' : 'Creator saved.'), 'success-text');
+    showStatus(updated ? 'Already saved, so the row was updated.' : 'Saved to the sheet and the moodboard.', 'success-text');
     setDot('green');
     updateSavedCount();
   } catch (e) {
@@ -494,99 +483,14 @@ sendBtn.addEventListener('click', async () => {
   }
 });
 
-// ---------- saved / sheets ----------
+// ---------- sheet count ----------
 
 async function updateSavedCount() {
   const records = await getRecords();
-  $('saved-count').innerText = records.length;
+  const fresh = records.filter(r => !r.exportedAt).length;
+  const el = $('sheet-count');
+  el.innerText = `${records.length} ${records.length === 1 ? 'creator' : 'creators'}${fresh ? `, ${fresh} new` : ''}`;
+  el.classList.toggle('has-new', fresh > 0);
 }
-
-async function renderSaved() {
-  const records = await getRecords();
-  const fresh = records.filter(r => !r.exportedAt);
-  $('saved-count').innerText = records.length;
-  $('saved-summary').innerText = records.length
-    ? `${records.length} saved. ${fresh.length ? fresh.length + ' not copied to a sheet yet.' : 'All copied.'}`
-    : 'Nothing saved yet. Scout a creator to start.';
-  $('copy-new-btn').innerText = fresh.length ? `Copy ${fresh.length} new row${fresh.length > 1 ? 's' : ''}` : 'No new rows';
-  $('copy-new-btn').disabled = !fresh.length;
-  $('clear-btn').classList.toggle('hidden', !records.length);
-
-  const list = $('saved-list');
-  list.innerHTML = '';
-  records.slice(0, 40).forEach(r => {
-    const li = document.createElement('li');
-    li.className = 'saved-item';
-    const thumb = r.thumb
-      ? `<span class="mini"><img src="${r.thumb}" alt=""></span>`
-      : `<span class="avatar">${(r.username || '?').replace(/^@/, '').charAt(0).toUpperCase()}</span>`;
-    const where = [r.brand, r.niche].filter(Boolean).join(' / ');
-    li.innerHTML = `${thumb}
-      <div class="saved-text">
-        <span class="saved-handle"></span>
-        <span class="saved-sub"></span>
-      </div>
-      ${r.exportedAt ? '' : '<span class="new-dot" title="Not copied to a sheet yet"></span>'}
-      <button class="del" title="Delete this row">×</button>`;
-    li.querySelector('.saved-handle').innerText = (r.platform === 'Instagram' ? '@' : '') + String(r.username || r.name).replace(/^@/, '');
-    li.querySelector('.saved-sub').innerText = where || `${formatCount(r.followers)} ${r.platform === 'YouTube' ? 'subs' : 'followers'}`;
-    li.querySelector('.del').addEventListener('click', async () => {
-      await deleteRecord(r.id);
-      renderSaved();
-    });
-    list.appendChild(li);
-  });
-}
-
-async function copyRows(rows, withHeader) {
-  await navigator.clipboard.writeText(toTSV(rows, withHeader));
-  await markExported(rows.map(r => r.id));
-}
-
-$('copy-new-btn').addEventListener('click', async () => {
-  const rows = (await getRecords()).filter(r => !r.exportedAt).reverse(); // oldest first
-  if (!rows.length) return;
-  try {
-    await copyRows(rows, false);
-    showStatus(`Copied ${rows.length} row${rows.length > 1 ? 's' : ''}. Paste under your last row.`, 'success-text');
-    renderSaved();
-  } catch (e) { fail('Couldn\'t copy. Click inside the popup and try again.'); }
-});
-
-$('copy-all-btn').addEventListener('click', async () => {
-  const rows = (await getRecords()).slice().reverse();
-  if (!rows.length) return fail('Nothing saved yet.');
-  try {
-    await copyRows(rows, true);
-    showStatus(`Copied ${rows.length} rows with headers. Paste into cell A1.`, 'success-text');
-    renderSaved();
-  } catch (e) { fail('Couldn\'t copy. Click inside the popup and try again.'); }
-});
-
-$('csv-btn').addEventListener('click', async () => {
-  const rows = (await getRecords()).slice().reverse();
-  if (!rows.length) return fail('Nothing saved yet.');
-  downloadText(toCSV(rows), `creator-scout-${formatDate(Date.now()).slice(0, 10)}.csv`, 'text/csv;charset=utf-8');
-  await markExported(rows.map(r => r.id));
-  showStatus('CSV downloaded. Import it in Sheets with File > Import.', 'success-text');
-  renderSaved();
-});
-
-$('open-sheets-btn').addEventListener('click', () => chrome.tabs.create({ url: 'https://sheets.new' }));
-
-$('clear-btn').addEventListener('click', async () => {
-  const btn = $('clear-btn');
-  if (btn.dataset.confirm !== '1') {
-    btn.dataset.confirm = '1';
-    btn.innerText = 'Click again to delete everything';
-    setTimeout(() => { btn.dataset.confirm = ''; btn.innerText = 'Delete all saved rows'; }, 3000);
-    return;
-  }
-  await setRecords([]);
-  btn.dataset.confirm = '';
-  btn.innerText = 'Delete all saved rows';
-  showStatus('All saved rows deleted.');
-  renderSaved();
-});
 
 init();

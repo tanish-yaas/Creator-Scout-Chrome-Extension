@@ -1,4 +1,4 @@
-# Creator Scout v3.1 🕵️‍♂️
+# Creator Scout v3.2 🕵️‍♂️
 
 Creator Scout is a Chrome extension for scouting Instagram and YouTube creators and their content. Everything you save stays inside the extension. You copy it into any Google Sheet when you want, it still syncs to the master database, and it lands on a moodboard grouped by brand and niche.
 
@@ -7,11 +7,11 @@ Creator Scout is a Chrome extension for scouting Instagram and YouTube creators 
 * **Instagram scraper:** Reads name, handle, followers and category from profiles. On reels and posts it also reads the thumbnail, caption, likes and comments, then looks up the creator's follower count.
 * **YouTube API:** Subscribers, country and the **average views of the last 10 videos**. On a short or video it also gets that video's views, likes and thumbnail.
 * **Tier classification:** Nano, Micro, Mid-Tier, Macro or Mega.
-* **Built-in sheet (no Apps Script needed):** Saved rows live in the extension. On the **Saved** tab:
-  * **Copy new rows** copies only the rows you haven't copied yet. Paste them under your last row in any Google Sheet with Ctrl/⌘ + V.
-  * **Copy all + headers** copies every row with headers for a fresh sheet (paste into A1).
-  * **Download CSV** gives you a file to import or send.
-  * **Open a new Google Sheet** opens sheets.new.
+* **Built-in sheet (no Apps Script needed):** Every save goes into the extension's own sheet. Click **Open sheet** in the popup (it shows how many creators and how many are new) to open the **Creator list** page, which has:
+  * **Copy for Google Sheets**: copies every row with headings as a real table. Paste into A1.
+  * **Copy new rows**: copies only rows you haven't copied yet. Paste under your last row.
+  * **Export Excel** (.xlsx) and **Export CSV**.
+  * Editable cells for Name, Category, Type, IP, Country, Brand, Niche and Festive Tags, plus a row filter and per-row delete.
 * **Master database:** Every save is also sent to the Make.com master webhook, the same as before.
 * **Moodboard:** Click **Moodboard ↗** in the popup.
   * The home screen is a curved carousel with **one card per brand**. Side cards sit in halftone, and the middle card gets a green scan line that brings it into colour.
@@ -36,7 +36,8 @@ Each save POSTs JSON to `MASTER_WEBHOOK_URL` with the original fields (`platform
 ## 🗂 Files
 | File | What it does |
 |---|---|
-| `popup.html / popup.js / popup.css` | Scout and Saved tabs |
+| `popup.html / popup.js / popup.css` | The popup: fetch, tag and save |
+| `sheet.html / sheet.js / sheet.css` | Creator list: the built-in sheet with copy and export |
 | `scraper.js` | Injected into Instagram to read profiles, reels and posts |
 | `db.js` | Shared storage, sheet export and number helpers |
 | `moodboard.html / moodboard.js / moodboard.css` | The moodboard dashboard |

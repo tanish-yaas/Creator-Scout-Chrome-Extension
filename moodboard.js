@@ -31,7 +31,7 @@ const brandLabel = b => b === UNFILED ? 'Unfiled' : b;
 
 async function load() {
   const all = await getRecords();
-  S.records = all.filter(r => r.contentUrl).sort((a, b) => (b.savedAt || 0) - (a.savedAt || 0));
+  S.records = all.slice().sort((a, b) => (b.savedAt || 0) - (a.savedAt || 0));
   S.taxonomy = await getTaxonomy();
   render();
 }
@@ -103,17 +103,19 @@ function renderHero() {
 
   if (!inBrand) {
     const brands = brandNames().filter(b => b !== UNFILED).length;
-    $('title').innerHTML = 'Every reel you scouted,<br>filed by brand';
+    $('title').innerHTML = 'Everything you scouted,<br>filed by brand';
     $('title').removeAttribute('title');
     $('sub').textContent = S.records.length
-      ? `${S.records.length} ${S.records.length === 1 ? 'reel' : 'reels'} across ${brands} ${brands === 1 ? 'brand' : 'brands'}. Swipe, drag or use the arrow keys, and open a card to see its reels.`
-      : 'Open a reel or a YouTube short, click Creator Scout, pick a brand and save. It lands here straight away.';
+      ? `${S.records.length} saved${brands ? ` across ${brands} ${brands === 1 ? 'brand' : 'brands'}` : ', none filed under a brand yet'}. Swipe, drag or use the arrow keys, and open a card to see what's inside.`
+      : 'Open a creator, reel or short, click Creator Scout, pick a brand and save. It lands here straight away.';
   } else {
     const all = S.records.filter(r => (r.brand || UNFILED) === S.brand);
     const niches = new Set(all.map(r => r.niche || NO_NICHE)).size;
     $('title').textContent = brandLabel(S.brand);
     $('title').title = S.brand === UNFILED ? '' : 'Double-click to rename';
-    $('sub').textContent = `${all.length} ${all.length === 1 ? 'reel' : 'reels'} in ${niches} ${niches === 1 ? 'niche' : 'niches'}.`;
+    $('sub').textContent = S.brand === UNFILED
+      ? `${all.length} saved without a brand. Give one a brand below to file it.`
+      : `${all.length} saved in ${niches} ${niches === 1 ? 'niche' : 'niches'}.`;
   }
 }
 
@@ -187,12 +189,13 @@ function cardHTML(item, i) {
       ${fest ? `<span class="fest">${fest}</span>` : ''}
       <div class="cap">
         <h2>${esc(brandLabel(item.name))}</h2>
-        <p>${count ? `${count} ${count === 1 ? 'reel' : 'reels'}, ${niches} ${niches === 1 ? 'niche' : 'niches'}` : 'No reels yet'}</p>
+        <p>${count ? `${count} saved, ${niches} ${niches === 1 ? 'niche' : 'niches'}` : 'Nothing saved yet'}</p>
       </div>
     </article>`;
   }
   const r = item.rec;
-  const stat = r.contentViews ? `${formatCount(r.contentViews)} views` : (r.contentLikes ? `${formatCount(r.contentLikes)} likes` : '');
+  const stat = !r.contentUrl ? `${formatCount(r.followers)} ${r.platform === 'YouTube' ? 'subs' : 'followers'}`
+    : r.contentViews ? `${formatCount(r.contentViews)} views` : (r.contentLikes ? `${formatCount(r.contentLikes)} likes` : '');
   const fest = (r.festive || []).slice(0, 3).map(f => festiveMeta(f).emoji).join(' ');
   return `<article class="card reel-card" data-i="${i}" tabindex="-1" aria-label="${esc(handleOf(r))}">
     ${mediaHTML(thumbsFor(item), String(r.username || '?').replace(/^@/, '').charAt(0).toUpperCase())}
@@ -380,7 +383,7 @@ window.addEventListener('resize', () => { if (S.layout === 'carousel') layout(S.
 function activate(item) {
   if (!item) return;
   if (item.kind === 'brand') openBrand(item.name);
-  else window.open(item.rec.contentUrl, '_blank', 'noopener');
+  else window.open(item.rec.contentUrl || item.rec.url, '_blank', 'noopener');
 }
 
 function openBrand(name) {
@@ -463,7 +466,7 @@ function renderInfo() {
       </div>
       <div class="feat">
         <h3>Festive</h3>
-        <p>${fest.length ? fest.map(([f, c]) => `${festiveMeta(f).emoji} ${esc(f)} <b>${c}</b>`).join('<br>') : 'No festive tags on these reels.'}</p>
+        <p>${fest.length ? fest.map(([f, c]) => `${festiveMeta(f).emoji} ${esc(f)} <b>${c}</b>`).join('<br>') : 'No festive tags here yet.'}</p>
       </div>
       <div class="feat">
         <h3>Top creators</h3>
@@ -476,7 +479,9 @@ function renderInfo() {
 
   const r = item.rec;
   const tier = calculateTier(r.followers);
-  const headline = r.contentViews ? `${formatCount(r.contentViews)} views` : (r.contentLikes ? `${formatCount(r.contentLikes)} likes` : 'No stats');
+  const isProfile = !r.contentUrl;
+  const headline = isProfile ? (r.platform === 'YouTube' && r.avgViews && r.avgViews !== '--' ? `${formatCount(r.avgViews)} avg views` : 'Creator profile')
+    : r.contentViews ? `${formatCount(r.contentViews)} views` : (r.contentLikes ? `${formatCount(r.contentLikes)} likes` : 'No stats');
   const brands = brandNames().filter(b => b !== UNFILED);
   const niches = r.brand ? (S.taxonomy.brands[r.brand] || []) : [];
   info.innerHTML = `
@@ -486,13 +491,13 @@ function renderInfo() {
         ${formatCount(r.followers)} ${r.platform === 'YouTube' ? 'subscribers' : 'followers'}${tier.class ? `, <span class="tier ${tier.class}">${tier.name}</span>` : ''}<br>
         ${[r.type, r.ip ? 'IP: ' + r.ip : ''].filter(Boolean).map(esc).join(', ')}</p>
       <p class="links">
-        <a href="${esc(r.contentUrl)}" target="_blank" rel="noopener">Open ${r.contentKind || 'reel'} ↗</a>
+        ${isProfile ? '' : `<a href="${esc(r.contentUrl)}" target="_blank" rel="noopener">Open ${r.contentKind || 'reel'} ↗</a>`}
         <a href="${esc(r.url)}" target="_blank" rel="noopener">Profile ↗</a>
       </p>
     </div>
     <div class="feat">
       <h3>${headline}</h3>
-      <p class="caption">${esc(r.caption || 'No caption saved.')}</p>
+      <p class="caption">${isProfile ? esc([r.category && r.category !== '--' && r.category !== 'None' ? r.category : '', r.country && r.country !== '--' ? r.country : ''].filter(Boolean).join(', ') || 'Saved from their profile page.') : esc(r.caption || 'No caption saved.')}</p>
       <p class="small">${[r.contentComments ? formatCount(r.contentComments) + ' comments' : '', r.postedAt, 'saved ' + formatDate(r.savedAt).slice(0, 10)].filter(Boolean).map(esc).join(', ')}</p>
     </div>
     <div class="feat edit">
@@ -556,12 +561,12 @@ $('copy-links').addEventListener('click', async () => {
     lines.push(b);
     Object.entries(ns).forEach(([n, rs]) => {
       lines.push(`  ${n}`);
-      rs.forEach(r => lines.push(`    ${handleOf(r)}${(r.festive || []).length ? ' [' + r.festive.join(', ') + ']' : ''}: ${r.contentUrl}`));
+      rs.forEach(r => lines.push(`    ${handleOf(r)}${(r.festive || []).length ? ' [' + r.festive.join(', ') + ']' : ''}: ${r.contentUrl || r.url}`));
     });
     lines.push('');
   });
-  await navigator.clipboard.writeText(lines.join('\n').trim());
-  toast(`Copied ${recs.length} link${recs.length > 1 ? 's' : ''}`);
+  const ok = await copyToClipboard(lines.join('\n').trim());
+  toast(ok ? `Copied ${recs.length} link${recs.length > 1 ? 's' : ''}` : 'Copy was blocked. Click the page once and try again.');
 });
 
 let toastTimer;

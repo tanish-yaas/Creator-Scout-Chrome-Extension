@@ -207,7 +207,8 @@ function renderFilters() {
 
   const fc = {};
   scope.forEach(r => (r.festive || []).forEach(f => { fc[f] = (fc[f] || 0) + 1; }));
-  const tags = S.taxonomy.festive.filter(f => fc[f.name] || S.festive.has(f.name));
+  // Festive tags are only offered inside a brand, not on the home screen
+  const tags = S.brand === null ? [] : S.taxonomy.festive.filter(f => fc[f.name] || S.festive.has(f.name));
   const platforms = new Set(scope.map(r => r.platform));
   const showPlat = platforms.size > 1 || S.platform !== 'all';
   if (tags.length || showPlat) {
@@ -377,10 +378,8 @@ function cardHTML(item, i) {
     const meta = metaOf(item.name);
     const reels = item.recs.filter(isContent).length;
     const creators = creatorsOf(item.recs).length;
-    const fest = [...new Set(item.recs.flatMap(r => r.festive || []))].slice(0, 4).map(f => festiveMeta(f).emoji).join(' ');
     return `<article class="card brand-card" data-i="${i}" tabindex="-1" aria-label="${esc(brandLabel(item.name))}" style="${cardStyle(meta.color)}">
       ${mediaHTML(item)}
-      ${fest ? `<span class="fest">${fest}</span>` : ''}
       <div class="cap">
         <h2>${esc(brandLabel(item.name))}</h2>
         <p>${item.recs.length ? `${reels} ${reels === 1 ? 'reel' : 'reels'}, ${creators} ${creators === 1 ? 'creator' : 'creators'}` : 'Nothing saved yet'}</p>
@@ -642,6 +641,7 @@ const brandRecordsFor = name => S.records.filter(r => brandOf(r) === name);
 function goHome() {
   S.brand = null;
   S.niche = null;
+  S.festive.clear();
   S.tab = 'reels';
   S.layout = 'carousel';
   S.q = '';

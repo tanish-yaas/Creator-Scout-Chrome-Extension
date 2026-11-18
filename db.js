@@ -19,8 +19,17 @@ const DEFAULT_FESTIVE = [
   { name: 'Christmas', emoji: '🎄', color: '#2F8F4E' },
   { name: 'New Year', emoji: '🎆', color: '#5468D4' },
   { name: "Valentine's", emoji: '❤️', color: '#E0435A' },
-  { name: 'Independence Day', emoji: '🇮🇳', color: '#3A7BD5' }
+  { name: 'Independence Day', emoji: '🇮🇳', color: '#3A7BD5' },
+  { name: 'Summer', emoji: '☀️', color: '#F5B83D' },
+  { name: 'Monsoon', emoji: '🌧️', color: '#4A90C2' },
+  { name: 'Winter', emoji: '❄️', color: '#7FB3E8' },
+  { name: 'Back to School', emoji: '🎒', color: '#E07A3F' },
+  { name: 'Wedding Season', emoji: '💍', color: '#C9A227' },
+  { name: 'Sale', emoji: '🏷️', color: '#E2463F' },
+  { name: 'Product Launch', emoji: '🚀', color: '#7A6FF0' }
 ];
+// Campaign types the team can tag reels with (festivals, seasons, sales, launches…).
+// Stored in the "festive" field so older rows keep working.
 
 const TAPE_FALLBACK_COLORS = ['#7A6FF0', '#2BA6A0', '#D46A6A', '#8C9B3A', '#C77D3A', '#5C8FD6'];
 
@@ -40,7 +49,7 @@ const SHEET_COLUMNS = [
   ['Country', r => r.country],
   ['Content URL', r => r.contentUrl],
   ['Niche', r => r.niche],
-  ['Festive Tags', r => (r.festive || []).join(', ')],
+  ['Campaign Type', r => (r.festive || []).join(', ')],
   ['Content Views', r => r.contentViews || ''],
   ['Content Likes', r => r.contentLikes || ''],
   ['Saved By', r => r.savedBy]
@@ -74,13 +83,19 @@ async function setRecords(records) {
   await storageSet({ [SCOUT_KEYS.records]: records });
 }
 
+// Always offer the built-in campaign types, plus any the team added
+function withDefaultTypes(list) {
+  const have = list || [];
+  return [...have, ...DEFAULT_FESTIVE.filter(d => !have.some(f => f.name.toLowerCase() === d.name.toLowerCase()))];
+}
+
 async function getTaxonomy() {
   const r = await storageGet([SCOUT_KEYS.taxonomy]);
   const t = r[SCOUT_KEYS.taxonomy] || {};
   return {
     brands: t.brands || {},            // { "Brand": ["Niche", ...] }
     meta: t.meta || {},                // { "Brand": { logo, color } }
-    festive: t.festive || DEFAULT_FESTIVE.slice()
+    festive: withDefaultTypes(t.festive)
   };
 }
 async function setTaxonomy(tax) {
@@ -427,7 +442,7 @@ function pullTeam() {
       const brands = {}, meta = {};
       d.brands.forEach(b => { brands[b.name] = b.niches || []; meta[b.name] = { logo: b.logo || '', color: b.color || '' }; });
       Object.keys(tax.brands).forEach(b => { if (pending.some(r => r.brand === b) && !brands[b]) brands[b] = tax.brands[b]; });
-      const newTax = { brands, meta, festive: d.festive && d.festive.length ? d.festive : tax.festive };
+      const newTax = { brands, meta, festive: withDefaultTypes(d.festive && d.festive.length ? d.festive : tax.festive) };
 
       if (JSON.stringify(merged) !== JSON.stringify(await getRecords())) await setRecords(merged);
       if (JSON.stringify(newTax) !== JSON.stringify(tax)) await setTaxonomy(newTax);

@@ -6,7 +6,7 @@
  * The sheet gets three tabs:
  *   Records  — every creator / reel the team saves (readable as a normal sheet)
  *   Brands   — logo and card colour for each brand on the moodboard, plus its niches
- *   Settings — shared festive tags
+ *   Settings — shared campaign types
  */
 
 // Must match TEAM_KEY in config.js of the extension. Change both to the same random text.
@@ -32,7 +32,7 @@ const RECORD_COLUMNS = [
   ['contentUrl', 'Content URL'],
   ['contentKind', 'Content Type'],
   ['niche', 'Niche'],
-  ['festive', 'Festive Tags'],
+  ['festive', 'Campaign Type'],
   ['contentViews', 'Content Views'],
   ['contentLikes', 'Content Likes'],
   ['contentComments', 'Content Comments'],

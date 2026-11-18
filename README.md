@@ -1,9 +1,9 @@
-# Creator Scout v4.3 🕵️‍♂️
+# Creator Scout v4.4 🕵️‍♂️
 
 Creator Scout is a Chrome extension for scouting Instagram and YouTube creators and their content. Everything you save stays inside the extension. You copy it into any Google Sheet when you want, it still syncs to the master database, and it lands on a moodboard grouped by brand and niche.
 
 ## ✨ Features
-* **One click on a reel:** Open the popup on any Instagram reel, post, profile, or YouTube short, video or channel, and it captures the page straight away. You get the thumbnail, caption and stats, plus the creator's name, followers, tier and profile picture. Pick a brand (it remembers your last one), optionally a niche and festive tags, and press **Save to moodboard**. The reel lands on that brand's moodboard and the creator is added to the sheet.
+* **One click on a reel:** Open the popup on any Instagram reel, post, profile, or YouTube short, video or channel, and it captures the page straight away. You get the thumbnail, caption and stats, plus the creator's name, followers, tier and profile picture. Pick a brand (it remembers your last one), optionally a niche and campaign type (festivals like Diwali, seasons like Summer, sales, launches), and press **Save to moodboard**. The reel lands on that brand's moodboard and the creator is added to the sheet.
 * **Brand (was IP):** Brand and IP are the same thing now. Old rows with an IP are moved to Brand automatically, and the Make.com payload still includes `ip` (a copy of brand) so the existing scenario keeps working.
 * **Shared team board:** With the team database connected (see `team-backend/SETUP.md`), everyone using the extension sees and adds to the same board and sheet, on any device. Saves made while offline upload automatically later.
 * **Moodboard dashboard:**
@@ -11,7 +11,7 @@ Creator Scout is a Chrome extension for scouting Instagram and YouTube creators 
   * Use **Edit card** to upload the brand's logo and pick a card colour, and **New brand** to add one.
   * The carousel is a wheel that loops forever: scroll (trackpad or mouse wheel), drag with momentum, or use the arrow keys, and it glides and settles on a card. With only a few brands, the wheel repeats them so there's never an empty gap.
   * Open a brand to get two tabs:
-    * **Reels**: a carousel or grid of its reels. The **Filters** menu next to Carousel / Grid filters by niche, festive tag and platform. Click a reel to play it embedded (Instagram or YouTube). The player panel shows the creator and stats, and that's where you change its brand, niche and festive tags or remove it. Use **+ Add reel links** to paste reference links; they're looked up and added with their creators.
+    * **Reels**: a carousel or grid of its reels. The **Filters** menu next to Carousel / Grid filters by niche, campaign type and platform. Click a reel to play it embedded (Instagram or YouTube). The player panel shows the creator and stats, and that's where you change its brand, niche and campaign type or remove it. Use **+ Add reel links** to paste reference links; they're looked up and added with their creators.
     * **Creators**: everyone saved for that brand, with followers, tier, niches, reel count and who saved them. **Copy list for Sheets** copies the table.
   * Double-click a brand's title to rename it for everyone.
   * **Deleting:** hover a reel and press × (or **Delete this reel** in the player) and confirm. To delete a whole brand, open **Edit card → Delete brand** and type the brand's name to confirm, like deleting a GitHub repo.
@@ -26,7 +26,7 @@ Creator Scout is a Chrome extension for scouting Instagram and YouTube creators 
 * **Master database:** Every save still goes to the Make.com master webhook.
 
 ## 📄 Sheet columns
-`Date` | `Platform` | `Username` | `Name` | `Followers` | `Category` | `Tier` | `Type` | `Brand` | `URL` | `Avg Views (10)` | `Country` | `Content URL` | `Niche` | `Festive Tags` | `Content Views` | `Content Likes` | `Saved By`
+`Date` | `Platform` | `Username` | `Name` | `Followers` | `Category` | `Tier` | `Type` | `Brand` | `URL` | `Avg Views (10)` | `Country` | `Content URL` | `Niche` | `Campaign Type` | `Content Views` | `Content Likes` | `Saved By`
 
 ## 🔌 Master webhook payload
 Each save POSTs JSON to `MASTER_WEBHOOK_URL` (in `config.js`, same URL as before). It includes the original fields (`platform, username, name, followers, category, tier, type, ip, url, avgViews, country`), with `ip` now holding the brand. It also includes `brand, contentUrl, contentKind, thumbUrl, caption, contentViews, contentLikes, contentComments, postedAt, niche, festive` (comma-separated), `savedBy` and `savedAt`. Make.com ignores fields you haven't mapped, so the existing scenario keeps working.

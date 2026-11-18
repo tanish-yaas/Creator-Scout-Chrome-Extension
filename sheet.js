@@ -12,7 +12,7 @@ const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': 
 // Columns you can edit in place, mapped to the record field they change
 const EDITABLE = {
   'Name': 'name', 'Category': 'category', 'Type': 'type',
-  'Country': 'country', 'Brand': 'brand', 'Niche': 'niche', 'Festive Tags': 'festive'
+  'Country': 'country', 'Brand': 'brand', 'Niche': 'niche', 'Campaign Type': 'festive'
 };
 const NUMERIC = new Set(['Followers', 'Avg Views (10)', 'Content Views', 'Content Likes']);
 const TIER_ORDER = { 'Nano': 1, 'Micro': 2, 'Mid-Tier': 3, 'Macro': 4, 'Mega': 5 };
@@ -30,6 +30,11 @@ function loadView() {
   let v = {};
   try { v = JSON.parse(localStorage.getItem(VIEW_KEY) || '{}'); } catch (e) { v = {}; }
   const names = SHEET_COLUMNS.map(c => c[0]);
+  // "Festive Tags" is now "Campaign Type"; keep its place in saved layouts
+  const renamed = n => (n === 'Festive Tags' ? 'Campaign Type' : n);
+  ['order', 'hidden'].forEach(k => { if (Array.isArray(v[k])) v[k] = v[k].map(renamed); });
+  if (v.sort && v.sort.col) v.sort.col = renamed(v.sort.col);
+  if (v.filters && v.filters['Festive Tags']) { v.filters['Campaign Type'] = v.filters['Festive Tags']; delete v.filters['Festive Tags']; }
   const order = (v.order || []).filter(n => names.includes(n));
   names.forEach(n => { if (!order.includes(n)) order.push(n); });
   return {

@@ -190,7 +190,7 @@ function renderHero() {
   }
 }
 
-// Filters live in one menu next to Carousel / Grid: niches, festive tags and platform
+// Filters live in one menu next to Carousel / Grid: niches, campaign types and platform
 function activeFilterCount() {
   return S.niches.size + S.festive.size + (S.platform !== 'all' ? 1 : 0);
 }
@@ -219,7 +219,7 @@ function renderFiltersPop() {
       <div class="fp-chips">${niches.length ? niches.map(([nm, c]) => `<button class="fpill ${S.niches.has(nm) ? 'on' : ''}" data-niche="${esc(nm)}">${esc(nm)} <span>${c}</span></button>`).join('') : '<span class="fp-none">No niches yet</span>'}</div>
     </div>
     <div class="fp-sec">
-      <p class="fp-label">Festive</p>
+      <p class="fp-label">Campaign type</p>
       <div class="fp-chips">${tags.map(f => `<button class="fpill festive ${S.festive.has(f.name) ? 'on' : ''} ${fc[f.name] ? '' : 'zero'}" data-festive="${esc(f.name)}" style="--c:${f.color}">${f.emoji} ${esc(f.name)} <span>${fc[f.name] || 0}</span></button>`).join('')}</div>
     </div>
     ${platforms.size > 1 || S.platform !== 'all' ? `<div class="fp-sec">
@@ -780,7 +780,7 @@ function renderInfo() {
   }
   const r = item.rec;
   info.innerHTML = `
-    <button class="open-cta glow-pill" id="play-this" title="Play it and edit its brand, niche and festive tags">Play ${esc(handleOf(r) || 'reel')} <span aria-hidden="true">▶</span></button>`;
+    <button class="open-cta glow-pill" id="play-this" title="Play it and edit its brand, niche and campaign type">Play ${esc(handleOf(r) || 'reel')} <span aria-hidden="true">▶</span></button>`;
   $('play-this').addEventListener('click', () => openPlayer(S.index));
 }
 

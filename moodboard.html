@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Moodboard · Creator Scout</title>
+  <link rel="icon" href="icons/icon32.png">
   <link rel="stylesheet" href="fonts/fonts.css">
   <link rel="stylesheet" href="moodboard.css">
 </head>
@@ -20,25 +21,31 @@
 
   <header class="hero">
     <button id="back" class="back hidden">← All brands</button>
-    <h1 id="title" class="title"></h1>
+    <div class="title-row">
+      <h1 id="title" class="title"></h1>
+      <div id="brand-actions" class="brand-actions hidden">
+        <button id="edit-card" class="ghost-btn">Edit card</button>
+      </div>
+    </div>
     <p id="sub" class="sub"></p>
-    <div id="brand-actions" class="brand-actions hidden">
-      <button id="edit-card" class="ghost-btn">Edit card</button>
+    <div class="search-row">
+      <label class="search glow-pill">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M16 16l4.5 4.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+        <input id="search" type="search" placeholder="Search brands, creators, captions" aria-label="Search" autocomplete="off">
+      </label>
+      <div id="view-tabs" class="seg view-tabs hidden" role="tablist">
+        <button data-tab="reels" class="on" role="tab">Reels <span id="count-reels"></span></button>
+        <button data-tab="creators" role="tab">Creators <span id="count-creators"></span></button>
+      </div>
     </div>
-    <label class="search glow-pill">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M16 16l4.5 4.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
-      <input id="search" type="search" placeholder="Search brands, creators, captions" aria-label="Search" autocomplete="off">
-    </label>
-    <div id="view-tabs" class="seg view-tabs hidden" role="tablist">
-      <button data-tab="reels" class="on" role="tab">Reels <span id="count-reels"></span></button>
-      <button data-tab="creators" role="tab">Creators <span id="count-creators"></span></button>
-    </div>
-    <div id="filters" class="filters"></div>
-    <div id="reel-tools" class="reel-tools hidden">
-      <button id="add-links-btn" class="ghost-btn">+ Add reel links</button>
-      <div id="layout-toggle" class="seg" role="group" aria-label="Layout">
-        <button data-layout="carousel" class="on">Carousel</button>
-        <button data-layout="grid">Grid</button>
+    <div class="controls-row">
+      <div id="filters" class="filters"></div>
+      <div id="reel-tools" class="reel-tools hidden">
+        <button id="add-links-btn" class="ghost-btn">+ Add reel links</button>
+        <div id="layout-toggle" class="seg" role="group" aria-label="Layout">
+          <button data-layout="carousel" class="on">Carousel</button>
+          <button data-layout="grid">Grid</button>
+        </div>
       </div>
     </div>
     <form id="add-links" class="add-links hidden">

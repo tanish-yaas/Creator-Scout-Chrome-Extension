@@ -20,7 +20,8 @@ const S = {
   items: [],
   itemsKey: '',
   chipsOpen: false,
-  playerIndex: -1
+  playerIndex: -1,
+  playerId: null
 };
 
 const UNFILED = '__unfiled';
@@ -40,6 +41,7 @@ const CARD_COLORS = ['', '#FC2779', '#E23744', '#FF6B00', '#F2A93B', '#FFD400', 
 let renderQueued = false;
 // Don't re-render under someone's cursor while they type; catch up when they leave the field
 const isEditing = () => {
+  if (!$('player').classList.contains('hidden')) return true;
   const a = document.activeElement;
   return a && a.matches('input, textarea, select') && (a.closest('#info') || a.closest('.modal') || a.closest('#add-links'));
 };
@@ -49,8 +51,15 @@ async function load() {
   S.records = all.sort((a, b) => (b.savedAt || 0) - (a.savedAt || 0));
   S.taxonomy = await getTaxonomy();
   S.taxonomy.meta = S.taxonomy.meta || {};
+  if (S.playerId && !$('player').classList.contains('hidden')) {
+    const a = document.activeElement;
+    if (!(a && a.closest('#player-side') && a.matches('input'))) renderPlayerSide();
+    renderQueued = true;
+    return;
+  }
   if (isEditing()) { renderQueued = true; return; }
   render();
+  if (S.playerId && !$('player').classList.contains('hidden')) renderPlayerSide();
   renderSyncState();
 }
 document.addEventListener('focusout', () => setTimeout(() => { if (renderQueued && !isEditing()) { renderQueued = false; render(); } }, 50));
@@ -272,13 +281,95 @@ function coverHTML(item) {
 }
 
 function mediaHTML(item) {
-  const inner = coverHTML(item);
   const mosaic = item.kind === 'brand' && !metaOf(item.name).logo && !metaOf(item.name).color && thumbsFor(item).length >= 4 ? 'mosaic' : '';
-  return `<div class="media">
-    <div class="layer color ${mosaic}">${inner}</div>
-    <div class="layer tone ${mosaic}">${inner}</div>
-    <span class="scan" aria-hidden="true"></span>
-  </div>`;
+  return `<div class="media"><div class="layer ${mosaic}">${coverHTML(item)}</div></div>`;
+}
+
+// ---------- glow colour taken from each card's cover ----------
+
+const glowCache = new Map();
+try { Object.entries(JSON.parse(localStorage.getItem('scoutGlow') || '{}')).forEach(([k, v]) => glowCache.set(k, v)); } catch (e) { /* ignore */ }
+const glowKey = src => src.length > 200 ? src.slice(0, 80) + src.length + src.slice(-80) : src;
+function saveGlowCache() {
+  try { localStorage.setItem('scoutGlow', JSON.stringify(Object.fromEntries([...glowCache].slice(-400)))); } catch (e) { /* ignore */ }
+}
+function hexToRgb(hex) {
+  const m = String(hex || '').match(/^#?([\da-f]{2})([\da-f]{2})([\da-f]{2})$/i);
+  return m ? m.slice(1).map(x => parseInt(x, 16)).join(', ') : '';
+}
+
+// Picks the most vivid colour in an image (not just the average, which tends to be muddy)
+async function coverColor(src) {
+  if (!src) return '';
+  const key = glowKey(src);
+  if (glowCache.has(key)) return glowCache.get(key);
+  let out = '';
+  try {
+    const blob = await (await fetch(src)).blob();
+    const bmp = await createImageBitmap(blob, { resizeWidth: 36, resizeHeight: 36, resizeQuality: 'low' });
+    const c = new OffscreenCanvas(36, 36);
+    const g = c.getContext('2d', { willReadFrequently: true });
+    g.drawImage(bmp, 0, 0);
+    const d = g.getImageData(0, 0, 36, 36).data;
+    const buckets = Array.from({ length: 12 }, () => ({ w: 0, r: 0, g: 0, b: 0 }));
+    let ar = 0, ag = 0, ab = 0, an = 0;
+    for (let i = 0; i < d.length; i += 4) {
+      if (d[i + 3] < 128) continue;
+      const r = d[i] / 255, gg = d[i + 1] / 255, b = d[i + 2] / 255;
+      const max = Math.max(r, gg, b), min = Math.min(r, gg, b), v = max, sat = max ? (max - min) / max : 0;
+      ar += d[i]; ag += d[i + 1]; ab += d[i + 2]; an++;
+      if (v < 0.18 || sat < 0.22) continue;
+      let h = 0;
+      if (max !== min) {
+        if (max === r) h = ((gg - b) / (max - min) + 6) % 6;
+        else if (max === gg) h = (b - r) / (max - min) + 2;
+        else h = (r - gg) / (max - min) + 4;
+      }
+      const bk = buckets[Math.floor(h * 2) % 12];
+      const w = sat * sat * v;
+      bk.w += w; bk.r += d[i] * w; bk.g += d[i + 1] * w; bk.b += d[i + 2] * w;
+    }
+    const best = buckets.reduce((a, b) => (b.w > a.w ? b : a));
+    if (best.w > 1.5) out = [best.r / best.w, best.g / best.w, best.b / best.w].map(Math.round).join(', ');
+    else if (an) {
+      // Mostly grey / black & white cover: use a soft version of its average tone
+      const avg = [ar / an, ag / an, ab / an].map(x => Math.round(Math.min(255, x * 0.6 + 90)));
+      out = avg.join(', ');
+    }
+  } catch (e) { out = ''; }
+  glowCache.set(key, out);
+  saveGlowCache();
+  return out;
+}
+
+function glowSource(item) {
+  if (item.kind === 'reel') return { rgb: '', src: item.rec.thumb || '' };
+  const meta = metaOf(item.name);
+  const rgb = hexToRgb(meta.color);
+  if (rgb) {
+    const [r, g, b] = rgb.split(',').map(Number);
+    const neutral = Math.max(r, g, b) - Math.min(r, g, b) < 30;
+    // A white / black / grey card glows in its logo's colour instead
+    if (!(neutral && meta.logo)) return { rgb, src: '' };
+  }
+  return { rgb: '', src: meta.logo || thumbsFor(item)[0] || '' };
+}
+
+const DEFAULT_GLOW = '166, 255, 61';
+// Gives every card its own glow colour, then updates the stage halo for the card in the middle
+function applyGlows(root) {
+  root.querySelectorAll('.card[data-i]').forEach(async el => {
+    const item = S.items[+el.dataset.i];
+    if (!item) return;
+    const { rgb, src } = glowSource(item);
+    const colour = rgb || (await coverColor(src)) || DEFAULT_GLOW;
+    if (S.items[+el.dataset.i] !== item) return;
+    el.style.setProperty('--glow', colour);
+    if (el.classList.contains('active')) setHalo(colour);
+  });
+}
+function setHalo(rgb) {
+  document.documentElement.style.setProperty('--halo', `rgb(${rgb || DEFAULT_GLOW})`);
 }
 
 function cardHTML(item, i) {
@@ -316,14 +407,29 @@ function cardHTML(item, i) {
 let pos = 0;
 let cardEls = [];
 
+const PERSPECTIVE = 1500;
+// Card size comes from the space the stage actually has, so the whole carousel fits on screen
 function geometry() {
   const w = window.innerWidth;
   const reel = S.brand !== null;
-  const cardW = reel ? Math.max(140, Math.min(190, w * 0.13)) : Math.max(170, Math.min(250, w * 0.17));
-  const cardH = reel ? cardW * 16 / 9 : cardW * 1.32;
-  const gap = Math.max(18, w * 0.016);
+  const ratio = reel ? 16 / 9 : 1.32;
   const R = Math.max(900, w * 0.95);
-  return { cardW, cardH, gap, R, step: Math.asin(Math.min(0.9, (cardW + gap) / R)) };
+  const stageEl = $('stage');
+  const avail = Math.max(220, (stageEl.clientHeight || window.innerHeight * 0.55) - 46);
+  let cardW = reel ? Math.max(130, Math.min(200, w * 0.135)) : Math.max(160, Math.min(260, w * 0.17));
+  let gap = Math.max(18, w * 0.016);
+  let step = 0, cardH = 0;
+  for (let k = 0; k < 4; k++) {
+    cardH = cardW * ratio;
+    step = Math.asin(Math.min(0.9, (cardW + gap) / R));
+    // Outer cards come closer and look bigger; make sure they fit too
+    const z = R * (1 - Math.cos(2.6 * step)) * 0.85;
+    const grow = PERSPECTIVE / (PERSPECTIVE - z);
+    if (cardH * grow <= avail) break;
+    cardW = cardW * (avail / (cardH * grow)) * 0.98;
+  }
+  cardH = cardW * ratio;
+  return { cardW, cardH, gap, R, step: Math.asin(Math.min(0.9, (cardW + gap) / R)), avail };
 }
 
 const looping = () => S.items.length >= 5;
@@ -342,7 +448,7 @@ function layout(p = S.index, animate = true) {
   const ring = $('ring');
   ring.style.setProperty('--cw', g.cardW + 'px');
   ring.style.setProperty('--ch', g.cardH + 'px');
-  ring.style.height = (g.cardH * 1.16 + 16) + 'px';
+  ring.style.height = g.avail + 'px';
   ring.classList.toggle('no-anim', !animate);
   const active = norm(p);
   cardEls.forEach((c, i) => {
@@ -364,6 +470,8 @@ function layout(p = S.index, animate = true) {
     c.style.pointerEvents = hide ? 'none' : '';
     c.style.zIndex = String(100 - Math.round(ad * 10));
     c.classList.toggle('active', i === active);
+    c.classList.toggle('near', ad < 1.5 && i !== active);
+    if (i === active && c.style.getPropertyValue('--glow')) setHalo(c.style.getPropertyValue('--glow'));
   });
   $('counter').textContent = S.items.length ? `${String(active + 1).padStart(2, '0')} / ${String(S.items.length).padStart(2, '0')}` : '';
   $('prev').disabled = !looping() && active <= 0;
@@ -391,6 +499,7 @@ function buildStage() {
     ring.innerHTML = S.items.map(cardHTML).join('');
     cardEls = [...ring.querySelectorAll('.card')];
     cardEls.forEach(c => c.querySelectorAll('img').forEach(img => img.addEventListener('error', () => img.remove(), { once: true })));
+    applyGlows(ring);
   }
   if (S.index < 0) S.index = Math.floor(S.items.length / 2);
   S.index = Math.min(S.index, Math.max(0, S.items.length - 1));
@@ -403,6 +512,7 @@ function buildStage() {
 
 function buildGrid() {
   $('grid').innerHTML = S.items.map(cardHTML).join('');
+  applyGlows($('grid'));
 }
 $('grid').addEventListener('click', e => {
   const c = e.target.closest('.card');
@@ -503,11 +613,12 @@ document.addEventListener('keydown', e => {
   else if (e.key === '/') { e.preventDefault(); $('search').focus(); }
 });
 
-let resizeTimer;
-window.addEventListener('resize', () => {
-  clearTimeout(resizeTimer);
-  resizeTimer = setTimeout(() => { if (!$('stage').classList.contains('hidden')) layout(S.index, false); }, 80);
-});
+// Re-fit the carousel whenever its space changes (window resize, paste box opening, filters wrapping)
+let fitFrame = 0;
+new ResizeObserver(() => {
+  cancelAnimationFrame(fitFrame);
+  fitFrame = requestAnimationFrame(() => { if (!$('stage').classList.contains('hidden') && cardEls.length) layout(pos, false); });
+}).observe($('stage'));
 
 function activate(item) {
   if (!item) return;
@@ -568,104 +679,24 @@ $('title').addEventListener('dblclick', () => {
   }, { once: true });
 });
 
-// ---------- info row under the carousel ----------
+// ---------- row under the carousel ----------
 
 function renderInfo() {
   const info = $('info');
   const item = S.items[S.index];
   if (!item || S.layout === 'grid' || (S.brand !== null && S.tab === 'creators')) { info.innerHTML = ''; return; }
-
   if (item.kind === 'brand') {
-    const recs = item.recs;
-    const niches = nicheCounts(recs.filter(isContent));
-    const fc = {};
-    recs.forEach(r => (r.festive || []).forEach(f => { fc[f] = (fc[f] || 0) + 1; }));
-    const fest = Object.entries(fc).sort((a, b) => b[1] - a[1]);
-    const creators = creatorsOf(recs).slice(0, 3);
     info.innerHTML = `
-      <div class="feat">
-        <h3>Niches</h3>
-        <p>${niches.length ? niches.map(([n, c]) => `${esc(n)} <b>${c}</b>`).join('<br>') : 'None yet. Add a niche when you save a reel.'}</p>
-      </div>
-      <div class="feat">
-        <h3>Festive</h3>
-        <p>${fest.length ? fest.map(([f, c]) => `${festiveMeta(f).emoji} ${esc(f)} <b>${c}</b>`).join('<br>') : 'No festive tags here yet.'}</p>
-      </div>
-      <div class="feat">
-        <h3>Top creators</h3>
-        <p>${creators.length ? creators.map(c => `${esc(handleOf(c))} <b>${formatCount(c.followers)}</b>`).join('<br>') : 'No creators yet.'}</p>
-      </div>
-      <div class="cta-row">
-        <button class="open-cta glow-pill" id="open-brand">Open ${esc(brandLabel(item.name))} <span aria-hidden="true">→</span></button>
-        ${item.name !== UNFILED ? '<button class="ghost-btn" id="edit-this-card">Edit card</button>' : ''}
-      </div>`;
+      <button class="open-cta glow-pill" id="open-brand">Open ${esc(brandLabel(item.name))} <span aria-hidden="true">→</span></button>
+      ${item.name !== UNFILED ? '<button class="ghost-btn" id="edit-this-card">Edit card</button>' : ''}`;
     $('open-brand').addEventListener('click', () => openBrand(item.name));
     if ($('edit-this-card')) $('edit-this-card').addEventListener('click', () => openBrandModal(item.name));
     return;
   }
-
   const r = item.rec;
-  const tier = calculateTier(r.followers);
-  const headline = r.contentViews ? `${formatCount(r.contentViews)} views` : (r.contentLikes ? `${formatCount(r.contentLikes)} likes` : 'No stats yet');
-  const brands = brandNames().filter(b => b !== UNFILED);
-  const niches = r.brand ? (S.taxonomy.brands[r.brand] || []) : [];
   info.innerHTML = `
-    <div class="feat">
-      <h3>${esc(handleOf(r) || 'Unknown creator')}</h3>
-      <p>${esc(r.name && r.name !== r.username ? r.name : '')}<br>
-        ${r.followers ? `${formatCount(r.followers)} ${r.platform === 'YouTube' ? 'subscribers' : 'followers'}` : ''}${tier.class ? `, <span class="tier ${tier.class}">${tier.name}</span>` : ''}<br>
-        ${[r.type, r.savedBy ? 'saved by ' + r.savedBy : ''].filter(Boolean).map(esc).join(', ')}</p>
-      <p class="links">
-        <button class="link-btn play-btn" id="play-this">Play ▶</button>
-        <a href="${esc(r.contentUrl)}" target="_blank" rel="noopener">Open ↗</a>
-        ${r.url ? `<a href="${esc(r.url)}" target="_blank" rel="noopener">Profile ↗</a>` : ''}
-      </p>
-    </div>
-    <div class="feat">
-      <h3>${headline}</h3>
-      <p class="caption">${esc(r.caption || 'No caption saved.')}</p>
-      <p class="small">${[r.contentComments ? formatCount(r.contentComments) + ' comments' : '', r.postedAt, 'saved ' + formatDate(r.savedAt).slice(0, 10)].filter(Boolean).map(esc).join(', ')}</p>
-    </div>
-    <div class="feat edit">
-      <h3>Filed under</h3>
-      <div class="edit-row">
-        <input id="e-brand" list="e-brands" value="${esc(r.brand)}" aria-label="Brand" placeholder="Brand">
-        <input id="e-niche" list="e-niches" value="${esc(r.niche)}" aria-label="Niche" placeholder="Niche">
-      </div>
-      <datalist id="e-brands">${brands.map(b => `<option value="${esc(b)}">`).join('')}</datalist>
-      <datalist id="e-niches">${niches.map(n => `<option value="${esc(n)}">`).join('')}</datalist>
-      <div class="chips">${chipList(r).map(f => `
-        <button class="chip ${(r.festive || []).includes(f.name) ? 'on' : ''}" data-f="${esc(f.name)}" style="--c:${f.color}" title="${esc(f.name)}">${f.emoji} ${esc(f.name)}</button>`).join('')}
-        ${S.taxonomy.festive.length > 5 ? `<button class="chip more" id="e-more">${S.chipsOpen ? 'Show less' : '+' + (S.taxonomy.festive.length - chipList(r).length) + ' more'}</button>` : ''}
-      </div>
-      <button class="remove" id="e-remove">Remove from board</button>
-    </div>`;
-
+    <button class="open-cta glow-pill" id="play-this" title="Play it and edit its brand, niche and festive tags">Play ${esc(handleOf(r) || 'reel')} <span aria-hidden="true">▶</span></button>`;
   $('play-this').addEventListener('click', () => openPlayer(S.index));
-  const save = async (key, v) => {
-    v = v.trim();
-    if (v === (r[key] || '')) return;
-    try {
-      await updateRecord(r.id, { [key]: v });
-      toast(key === 'brand' ? (v ? `Moved to ${v}` : 'Moved to Unfiled') : 'Saved');
-    } catch (err) { toast('Couldn\'t save: ' + err.message); load(); }
-  };
-  $('e-brand').addEventListener('change', e => save('brand', e.target.value));
-  $('e-niche').addEventListener('change', e => save('niche', e.target.value));
-  info.querySelectorAll('.chip[data-f]').forEach(b => b.addEventListener('click', async () => {
-    const f = b.dataset.f;
-    const cur = r.festive || [];
-    b.classList.toggle('on');
-    try { await updateRecord(r.id, { festive: cur.includes(f) ? cur.filter(x => x !== f) : [...cur, f] }); }
-    catch (err) { toast('Couldn\'t save: ' + err.message); load(); }
-  }));
-  if ($('e-more')) $('e-more').addEventListener('click', () => { S.chipsOpen = !S.chipsOpen; renderInfo(); });
-  const rm = $('e-remove');
-  rm.addEventListener('click', async () => {
-    if (rm.dataset.confirm !== '1') { rm.dataset.confirm = '1'; rm.textContent = 'Click again to remove for everyone'; return; }
-    try { await deleteRecord(r.id); toast('Removed from board'); }
-    catch (err) { toast('Couldn\'t remove: ' + err.message); }
-  });
 }
 
 function chipList(r) {
@@ -798,7 +829,19 @@ function openPlayer(i) {
   $('player-frame').innerHTML = src
     ? `<iframe src="${esc(src)}" allow="autoplay; encrypted-media; picture-in-picture; clipboard-write" allowfullscreen loading="lazy" title="${esc(handleOf(r))}"></iframe>`
     : `<p class="empty">This link can't be embedded. <a href="${esc(r.contentUrl)}" target="_blank" rel="noopener">Open it ↗</a></p>`;
+  S.playerId = r.id;
+  renderPlayerSide();
+  $('player').classList.remove('hidden');
+  document.body.classList.add('modal-open');
+}
+
+function renderPlayerSide() {
+  const i = S.playerIndex;
+  const r = S.records.find(x => x.id === S.playerId);
+  if (!r) { closePlayer(); return; }
   const tier = calculateTier(r.followers);
+  const brands = brandNames().filter(b => b !== UNFILED);
+  const niches = r.brand ? (S.taxonomy.brands[r.brand] || []) : [];
   $('player-side').innerHTML = `
     <p class="pl-handle">${esc(handleOf(r) || 'Unknown creator')}</p>
     <p class="pl-name">${esc(r.name && r.name !== r.username ? r.name : '')}</p>
@@ -809,15 +852,51 @@ function openPlayer(i) {
       ${r.contentLikes ? `<div><span>Likes</span><b>${formatCount(r.contentLikes)}</b></div>` : ''}
     </div>
     ${r.caption ? `<p class="pl-caption">${esc(r.caption)}</p>` : ''}
-    <p class="pl-meta">${[brandLabel(brandOf(r)), r.niche, ...(r.festive || []).map(f => festiveMeta(f).emoji + ' ' + f)].filter(Boolean).map(esc).join('<br>')}</p>
-    <p class="pl-meta">${[r.savedBy ? 'Saved by ' + r.savedBy : '', formatDate(r.savedAt).slice(0, 10)].filter(Boolean).map(esc).join(', ')}</p>
+    <p class="pl-meta">${[r.type, r.savedBy ? 'Saved by ' + r.savedBy : '', formatDate(r.savedAt).slice(0, 10)].filter(Boolean).map(esc).join(', ')}</p>
+
+    <p class="pl-label">Filed under</p>
+    <div class="edit-row">
+      <input id="e-brand" list="e-brands" value="${esc(r.brand)}" aria-label="Brand" placeholder="Brand">
+      <input id="e-niche" list="e-niches" value="${esc(r.niche)}" aria-label="Niche" placeholder="Niche">
+    </div>
+    <datalist id="e-brands">${brands.map(b => `<option value="${esc(b)}">`).join('')}</datalist>
+    <datalist id="e-niches">${niches.map(n => `<option value="${esc(n)}">`).join('')}</datalist>
+    <div class="chips">${chipList(r).map(f => `
+      <button class="chip ${(r.festive || []).includes(f.name) ? 'on' : ''}" data-f="${esc(f.name)}" style="--c:${f.color}" title="${esc(f.name)}">${f.emoji} ${esc(f.name)}</button>`).join('')}
+      ${S.taxonomy.festive.length > 5 ? `<button class="chip more" id="e-more">${S.chipsOpen ? 'Show less' : '+' + (S.taxonomy.festive.length - chipList(r).length) + ' more'}</button>` : ''}
+    </div>
+
     <div class="pl-links">
       <a href="${esc(r.contentUrl)}" target="_blank" rel="noopener">Open on ${esc(r.platform || 'Instagram')} ↗</a>
       ${r.url ? `<a href="${esc(r.url)}" target="_blank" rel="noopener">Creator profile ↗</a>` : ''}
     </div>
+    <button class="remove" id="e-remove">Remove from board</button>
     <p class="pl-count">${i + 1} / ${S.items.length}</p>`;
-  $('player').classList.remove('hidden');
-  document.body.classList.add('modal-open');
+
+  const save = async (key, v) => {
+    v = v.trim();
+    if (v === (r[key] || '')) return;
+    try {
+      await updateRecord(r.id, { [key]: v });
+      toast(key === 'brand' ? (v ? `Moved to ${v}` : 'Moved to Unfiled') : 'Saved');
+    } catch (err) { toast('Couldn\'t save: ' + err.message); load(); }
+  };
+  $('e-brand').addEventListener('change', e => save('brand', e.target.value));
+  $('e-niche').addEventListener('change', e => save('niche', e.target.value));
+  $('player-side').querySelectorAll('.chip[data-f]').forEach(b => b.addEventListener('click', async () => {
+    const f = b.dataset.f;
+    const cur = r.festive || [];
+    b.classList.toggle('on');
+    try { await updateRecord(r.id, { festive: cur.includes(f) ? cur.filter(x => x !== f) : [...cur, f] }); }
+    catch (err) { toast('Couldn\'t save: ' + err.message); load(); }
+  }));
+  if ($('e-more')) $('e-more').addEventListener('click', () => { S.chipsOpen = !S.chipsOpen; renderPlayerSide(); });
+  const rm = $('e-remove');
+  rm.addEventListener('click', async () => {
+    if (rm.dataset.confirm !== '1') { rm.dataset.confirm = '1'; rm.textContent = 'Click again to remove for everyone'; return; }
+    try { await deleteRecord(r.id); toast('Removed from board'); closePlayer(); }
+    catch (err) { toast('Couldn\'t remove: ' + err.message); }
+  });
 }
 
 function closePlayer() {
@@ -826,6 +905,8 @@ function closePlayer() {
   document.body.classList.remove('modal-open');
   if (S.playerIndex >= 0 && S.layout === 'carousel' && S.playerIndex !== S.index) go(S.playerIndex, false);
   S.playerIndex = -1;
+  S.playerId = null;
+  if (renderQueued) { renderQueued = false; render(); }
 }
 function stepPlayer(d) {
   if (S.playerIndex < 0 || !S.items.length) return;
@@ -883,7 +964,8 @@ function renderBrandPreview() {
   const inner = bm.logo
     ? `<div class="logo-cover"><img src="${esc(bm.logo)}" alt=""></div>`
     : `<div class="logo-cover"><span class="initial">${esc(name.charAt(0).toUpperCase())}</span></div>`;
-  card.innerHTML = `<div class="media"><div class="layer color">${inner}</div><div class="layer tone">${inner}</div><span class="scan"></span></div>
+  card.style.setProperty('--glow', hexToRgb(bm.color) || DEFAULT_GLOW);
+  card.innerHTML = `<div class="media"><div class="layer">${inner}</div></div>
     <div class="cap"><h2>${esc(name)}</h2><p>Preview</p></div>`;
 }
 $('bm-name').addEventListener('input', renderBrandPreview);
@@ -993,6 +1075,8 @@ function render() {
 
   const empty = !S.items.length;
   const grid = S.layout === 'grid' && S.brand !== null && !creatorsTab;
+  // Carousel views fit in one screen; the grid and the creators list scroll
+  document.body.classList.toggle('fit', !grid && !creatorsTab);
   $('stage').classList.toggle('hidden', grid || empty || creatorsTab);
   $('grid').classList.toggle('hidden', !grid || empty || creatorsTab);
   $('creators').classList.toggle('hidden', !creatorsTab);

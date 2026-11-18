@@ -35,14 +35,3 @@
   box-shadow: 0 0 12px 1px var(--acid-glow);
   pointer-events: none;
 }
-
-/* Halftone screen used on thumbnails */
-.tone-screen { position: relative; }
-.tone-screen > img { filter: grayscale(1) contrast(1.35) brightness(1.15); }
-.tone-screen::after {
-  content: "";
-  position: absolute; inset: 0;
-  background-image: radial-gradient(circle, transparent 0 0.75px, rgba(0, 0, 0, 0.92) 1.35px);
-  background-size: 3px 3px;
-  pointer-events: none;
-}

@@ -42,10 +42,11 @@ const RECORD_COLUMNS = [
   ['avatar', 'Profile Picture'],
   ['savedBy', 'Saved By'],
   ['savedAt', 'Saved At'],
-  ['updatedAt', 'Updated At']
+  ['updatedAt', 'Updated At'],
+  ['lastSavedAt', 'Last Saved At']
 ];
 const BRAND_COLUMNS = [['name', 'Brand'], ['logo', 'Logo'], ['color', 'Color'], ['niches', 'Niches'], ['updatedAt', 'Updated At']];
-const NUMBER_FIELDS = ['followers', 'avgViews', 'contentViews', 'contentLikes', 'contentComments', 'savedAt', 'updatedAt'];
+const NUMBER_FIELDS = ['followers', 'avgViews', 'contentViews', 'contentLikes', 'contentComments', 'savedAt', 'updatedAt', 'lastSavedAt'];
 
 // ---------------------------------------------------------------- web app entry points
 

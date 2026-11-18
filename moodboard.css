@@ -153,29 +153,6 @@ button { cursor: pointer; }
   background: linear-gradient(160deg, #1a1a1a, #070707);
 }
 
-.tone {
-  clip-path: inset(0 0 0 0);
-  transition: clip-path 0.9s cubic-bezier(0.6, 0, 0.2, 1);
-}
-.tone img { filter: grayscale(1) contrast(1.35) brightness(1.15); }
-.tone::after {
-  content: "";
-  position: absolute; inset: 0;
-  background-image: radial-gradient(circle, transparent 0 0.75px, rgba(0, 0, 0, 0.9) 1.35px);
-  background-size: 3px 3px;
-}
-.scan {
-  position: absolute; top: 0; bottom: 0; left: 100%;
-  width: 2px; margin-left: -1px;
-  background: var(--acid);
-  box-shadow: 0 0 10px 2px var(--acid-glow), 0 0 32px 6px rgba(166, 255, 61, 0.35);
-  opacity: 0;
-  transition: left 0.9s cubic-bezier(0.6, 0, 0.2, 1), opacity 0.3s ease;
-}
-.card.active .tone,
-.grid .card:hover .tone { clip-path: inset(0 62% 0 0); }
-.card.active .scan,
-.grid .card:hover .scan { left: 38%; opacity: 1; }
 .card.active {
   box-shadow: 0 0 0 1px rgba(166, 255, 61, 0.3), 0 0 50px -12px rgba(166, 255, 61, 0.45);
   cursor: pointer;
@@ -322,7 +299,7 @@ button { cursor: pointer; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .card, .tone, .scan, .toast { transition: none !important; }
+  .card, .layer, .toast { transition: none !important; }
 }
 
 /* ==========================================================
@@ -350,8 +327,6 @@ body.modal-open { overflow: hidden; }
   width: auto; height: auto; max-width: 64%; max-height: 40%;
   object-fit: contain; filter: none;
 }
-.tone .logo-cover { filter: grayscale(1) contrast(1.15); }
-.tone .logo-cover img { filter: none; }
 .initial {
   font-family: var(--pixel); font-size: 96px; line-height: 1;
   color: var(--ink, #fff); opacity: 0.92;
@@ -497,4 +472,106 @@ body.modal-open { overflow: hidden; }
   .player-side { width: min(400px, 86vw); }
   .bm-body { flex-direction: column; align-items: center; }
   .top-actions .sync-state { display: none; }
+}
+
+/* ==========================================================
+   v4.1 — colour-matched glow, one-screen layout, no halftone
+   ========================================================== */
+
+@property --halo { syntax: '<color>'; inherits: true; initial-value: rgb(166, 255, 61); }
+:root { --halo: rgb(166, 255, 61); transition: --halo 0.7s ease; }
+
+body {
+  background:
+    radial-gradient(ellipse 60% 42% at 50% 64%, color-mix(in srgb, var(--halo) 13%, transparent), transparent 70%),
+    var(--bg);
+}
+.halo {
+  background: radial-gradient(ellipse at center, color-mix(in srgb, var(--halo) 30%, transparent), color-mix(in srgb, var(--halo) 6%, transparent) 45%, transparent 70%);
+}
+
+/* every card glows in its own cover colour */
+.card { --glow: 166, 255, 61; }
+.card.active,
+.grid .card:hover {
+  box-shadow: 0 0 0 1px rgba(var(--glow), 0.5), 0 0 60px -8px rgba(var(--glow), 0.6), 0 24px 70px -30px rgba(var(--glow), 0.7);
+}
+.preview-card { box-shadow: 0 0 0 1px rgba(var(--glow), 0.5), 0 0 50px -10px rgba(var(--glow), 0.6); }
+
+/* depth without the black-and-white effect: side cards are just a little dimmer */
+.layer { transition: filter 0.5s ease; }
+.ring .card:not(.active) .layer { filter: brightness(0.62) saturate(0.9); }
+.ring .card.near .layer { filter: brightness(0.74) saturate(0.95); }
+.ring .card:not(.active) .cap { opacity: 0.85; }
+
+/* ---------- one-screen layout for carousel views ---------- */
+
+body.fit { height: 100vh; overflow: hidden; display: flex; flex-direction: column; }
+body.fit .top { flex: 0 0 auto; padding-top: 14px; padding-bottom: 6px; }
+body.fit .hero { flex: 0 0 auto; padding-top: 0; }
+body.fit .stage { flex: 1 1 auto; min-height: 0; margin-top: 8px; display: flex; flex-direction: column; justify-content: center; }
+body.fit .ring { flex: 0 0 auto; }
+body.fit .counter { margin: 2px 0 0; }
+body.fit .info {
+  flex: 0 0 auto;
+  display: flex; gap: 12px; justify-content: center; align-items: center;
+  margin: 8px auto 0; padding: 0 24px 20px; max-width: none;
+}
+.info .open-cta { padding: 10px 22px; }
+.hint-line { font-size: 12px; color: var(--mute); }
+
+body.fit .title { font-size: clamp(26px, min(3.2vw, 5.2vh), 48px); line-height: 1.1; }
+body.fit.in-brand .title { font-size: clamp(32px, min(4.2vw, 7vh), 64px); }
+body.fit .sub { margin-top: 10px; font-size: 14.5px; }
+body.fit .search { margin-top: 14px; height: 42px; }
+body.fit .filters { margin-top: 10px; gap: 6px; }
+body.fit .view-tabs { margin-top: 12px; }
+body.fit .reel-tools { margin-top: 8px; }
+
+/* short windows: tighten further */
+@media (max-height: 780px) {
+  body.fit .sub { display: none; }
+  body.fit .pill-row { max-height: 30px; overflow: hidden; }
+}
+
+/* player side panel now holds the editing */
+.pl-label { margin: 16px 0 8px; font-size: 12px; color: var(--dim); }
+.player-side .edit-row input { text-align: left; }
+.player-side .chips { justify-content: flex-start; }
+.player-side .remove { margin-top: 16px; padding: 0; }
+.glow-pill::before {
+  background: linear-gradient(90deg, transparent, var(--halo), transparent);
+  box-shadow: 0 0 12px 1px color-mix(in srgb, var(--halo) 55%, transparent);
+}
+.search:focus-within { border-color: color-mix(in srgb, var(--halo) 50%, transparent); }
+
+/* ---------- compact header rows ---------- */
+
+.hero { position: relative; }
+.title-row { display: flex; align-items: center; justify-content: center; gap: 14px; flex-wrap: wrap; }
+.title-row .brand-actions { margin: 0; }
+.search-row { display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap; width: 100%; }
+.search-row .view-tabs { margin: 0; }
+.search-row .search { margin-top: 0; }
+.hero > .search-row { margin-top: 22px; }
+.controls-row { display: flex; align-items: center; justify-content: center; gap: 8px 10px; flex-wrap: wrap; margin-top: 14px; max-width: 1100px; }
+.controls-row .filters { margin: 0; flex-direction: row; flex-wrap: wrap; justify-content: center; min-height: 0; }
+.controls-row .pill-row { flex-wrap: wrap; }
+.controls-row .reel-tools { margin: 0; }
+.controls-row:empty, .controls-row .filters:empty { display: none; }
+
+.in-brand .sub { display: none; }
+.in-brand .back { position: absolute; left: 32px; top: 0; margin: 0; }
+.in-brand .search { width: min(380px, 70vw); }
+
+body.fit .hero > .search-row { margin-top: 12px; }
+body.fit .controls-row { margin-top: 10px; }
+body.fit .search { height: 40px; }
+body.fit .title-row .ghost-btn { padding: 6px 12px; }
+@media (max-height: 700px) {
+  body.fit.in-brand .title { font-size: clamp(28px, 6vh, 44px); }
+  body.fit .fpill { padding: 4px 10px; font-size: 12px; }
+}
+@media (max-width: 760px) {
+  .in-brand .back { position: static; margin-bottom: 6px; }
 }

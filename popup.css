@@ -86,17 +86,6 @@ button:disabled { opacity: 0.35; cursor: default; }
   border-radius: 8px; overflow: hidden; background: #111;
 }
 .thumb img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
-.thumb-tone { position: absolute; inset: 0; clip-path: inset(0 55% 0 0); }
-.thumb-tone img { filter: grayscale(1) contrast(1.35) brightness(1.15); }
-.thumb-tone::after {
-  content: ""; position: absolute; inset: 0;
-  background-image: radial-gradient(circle, transparent 0 0.6px, rgba(0, 0, 0, 0.9) 1.1px);
-  background-size: 2.5px 2.5px;
-}
-.thumb .scan {
-  position: absolute; top: 0; bottom: 0; left: 45%; width: 1.5px;
-  background: var(--acid); box-shadow: 0 0 8px 2px var(--acid-glow);
-}
 .content-meta { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
 .kind { font-family: var(--pixel); font-size: 11px; color: var(--acid); }
 .caption {

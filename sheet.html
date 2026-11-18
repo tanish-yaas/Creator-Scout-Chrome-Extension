@@ -4,13 +4,14 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Creator list · Creator Scout</title>
+  <link rel="icon" href="icons/icon32.png">
   <link rel="stylesheet" href="fonts/fonts.css">
   <link rel="stylesheet" href="sheet.css">
 </head>
 <body>
   <header class="head">
     <div>
-      <a class="mark" id="to-moodboard" href="moodboard.html"><span class="dot"></span>Creator Scout</a>
+      <a class="mark" href="moodboard.html"><span class="dot"></span>Creator Scout</a>
       <h1 class="title">Creator list</h1>
       <p id="sub" class="sub"></p>
     </div>
@@ -23,30 +24,51 @@
     <span class="divider"></span>
     <button id="export-xlsx" class="ghost">Export Excel</button>
     <button id="export-csv" class="ghost">Export CSV</button>
+    <span class="divider"></span>
+    <button id="clear-sheet" class="ghost">Clear sheet</button>
     <label class="search">
-      <input id="search" type="search" placeholder="Filter rows" aria-label="Filter rows">
+      <input id="search" type="search" placeholder="Search rows" aria-label="Search rows">
     </label>
-    <div class="more-wrap">
+    <div class="pop-wrap">
+      <button id="columns-btn" class="ghost" aria-haspopup="true">Columns</button>
+      <div id="columns-menu" class="menu columns-menu hidden"></div>
+    </div>
+    <div class="pop-wrap">
       <button id="more" class="ghost icon" aria-label="More actions" aria-haspopup="true">···</button>
       <div id="more-menu" class="menu hidden" role="menu">
         <button id="open-team-sheet" role="menuitem" class="hidden">Open the team Google Sheet ↗</button>
         <button id="open-gsheet" role="menuitem">Open a new Google Sheet ↗</button>
         <button id="mark-copied" role="menuitem">Mark all as copied</button>
-        <button id="delete-all" role="menuitem" class="danger">Delete all rows (for everyone)</button>
+        <button id="reset-view" role="menuitem">Reset sorting, filters and columns</button>
       </div>
     </div>
   </div>
 
-  <main class="table-wrap">
+  <div id="view-bar" class="view-bar"></div>
+
+  <main class="table-wrap" id="table-wrap">
     <table id="table">
       <thead id="thead"></thead>
       <tbody id="tbody"></tbody>
     </table>
-    <div id="empty" class="empty hidden">
-      <p class="pixel">No creators yet</p>
-      <p>Open a profile, reel or short, click Creator Scout, then Fetch page and Save. Rows show up here straight away.</p>
-    </div>
+    <div id="empty" class="empty hidden"></div>
   </main>
+
+  <!-- column header menu -->
+  <div id="col-menu" class="menu col-menu hidden" role="dialog"></div>
+
+  <!-- clear sheet confirm -->
+  <div id="clear-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="clear-title">
+    <div class="modal-box">
+      <h2 id="clear-title" class="modal-title">Clear the sheet?</h2>
+      <p>This empties the sheet on this extension only. Nothing is deleted from the team board, the moodboard or the master database, and you can bring the rows back with <b>Restore</b>.</p>
+      <p>Creators you scout from now on show up here as usual.</p>
+      <div class="modal-actions">
+        <button id="clear-cancel" class="ghost">Cancel</button>
+        <button id="clear-confirm" class="primary glow-pill">Clear sheet</button>
+      </div>
+    </div>
+  </div>
 
   <div id="toast" class="toast" role="status"></div>
 

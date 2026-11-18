@@ -153,20 +153,20 @@ function cleanCell(v) {
 }
 
 // Tab-separated text pastes straight into Google Sheets / Excel as rows & columns.
-function toTSV(records, withHeader) {
+function toTSV(records, withHeader, cols = SHEET_COLUMNS) {
   const lines = [];
-  if (withHeader) lines.push(SHEET_COLUMNS.map(c => c[0]).join('\t'));
-  records.forEach(r => lines.push(SHEET_COLUMNS.map(c => cleanCell(c[1](r))).join('\t')));
+  if (withHeader) lines.push(cols.map(c => c[0]).join('\t'));
+  records.forEach(r => lines.push(cols.map(c => cleanCell(c[1](r))).join('\t')));
   return lines.join('\n');
 }
 
-function toCSV(records) {
+function toCSV(records, cols = SHEET_COLUMNS) {
   const esc = v => {
     const s = v === null || v === undefined ? '' : String(v);
     return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
   };
-  const lines = [SHEET_COLUMNS.map(c => esc(c[0])).join(',')];
-  records.forEach(r => lines.push(SHEET_COLUMNS.map(c => esc(c[1](r))).join(',')));
+  const lines = [cols.map(c => esc(c[0])).join(',')];
+  records.forEach(r => lines.push(cols.map(c => esc(c[1](r))).join(',')));
   return '﻿' + lines.join('\r\n'); // BOM so Excel reads emoji / Hindi names correctly
 }
 
@@ -272,12 +272,12 @@ async function copyToClipboard(text, html) {
   return ok;
 }
 
-function toHTMLTable(records, withHeader) {
+function toHTMLTable(records, withHeader, cols = SHEET_COLUMNS) {
   const e = s => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   let h = '<meta charset="utf-8"><table>';
-  if (withHeader) h += '<tr>' + SHEET_COLUMNS.map(c => `<th>${e(c[0])}</th>`).join('') + '</tr>';
+  if (withHeader) h += '<tr>' + cols.map(c => `<th>${e(c[0])}</th>`).join('') + '</tr>';
   records.forEach(r => {
-    h += '<tr>' + SHEET_COLUMNS.map(c => {
+    h += '<tr>' + cols.map(c => {
       const v = cleanCell(c[1](r));
       return /^https?:\/\//.test(v) ? `<td><a href="${e(v)}">${e(v)}</a></td>` : `<td>${e(v)}</td>`;
     }).join('') + '</tr>';
@@ -289,7 +289,7 @@ function toHTMLTable(records, withHeader) {
 
 const NUMERIC_COLUMNS = new Set(['Followers', 'Avg Views (10)', 'Content Views', 'Content Likes']);
 
-function toXLSX(records) {
+function toXLSX(records, cols = SHEET_COLUMNS) {
   const x = s => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
     .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, '');
   const colName = i => { let s = ''; i++; while (i) { const m = (i - 1) % 26; s = String.fromCharCode(65 + m) + s; i = Math.floor((i - 1) / 26); } return s; };
@@ -298,16 +298,16 @@ function toXLSX(records) {
     if (!header && typeof v === 'number' && isFinite(v)) return `<c r="${ref}"${style}><v>${v}</v></c>`;
     return `<c r="${ref}" t="inlineStr"${style}><is><t xml:space="preserve">${x(v)}</t></is></c>`;
   };
-  let rows = '<row r="1">' + SHEET_COLUMNS.map((c, i) => cell(colName(i) + '1', c[0], true)).join('') + '</row>';
+  let rows = '<row r="1">' + cols.map((c, i) => cell(colName(i) + '1', c[0], true)).join('') + '</row>';
   records.forEach((r, ri) => {
     const n = ri + 2;
-    rows += `<row r="${n}">` + SHEET_COLUMNS.map((c, i) => {
+    rows += `<row r="${n}">` + cols.map((c, i) => {
       let v = cleanCell(c[1](r));
       if (NUMERIC_COLUMNS.has(c[0]) && v !== '' && !isNaN(Number(v))) v = Number(v);
       return cell(colName(i) + n, v, false);
     }).join('') + '</row>';
   });
-  const widths = SHEET_COLUMNS.map((c, i) => `<col min="${i + 1}" max="${i + 1}" width="${/URL/.test(c[0]) ? 42 : 16}" customWidth="1"/>`).join('');
+  const widths = cols.map((c, i) => `<col min="${i + 1}" max="${i + 1}" width="${/URL/.test(c[0]) ? 42 : 16}" customWidth="1"/>`).join('');
   const files = {
     '[Content_Types].xml': '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>',
     '_rels/.rels': '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>',
@@ -469,7 +469,7 @@ async function replaceLocal(oldId, rec) {
 // ---------- the functions pages call ----------
 
 async function upsertRecord(rec) {
-  rec = normalizeRecord(rec);
+  rec = { ...normalizeRecord(rec), lastSavedAt: Date.now() };
   if (!teamOn()) return localUpsert(rec);
   try {
     const { pending, synced, exportedAt, ...clean } = rec;

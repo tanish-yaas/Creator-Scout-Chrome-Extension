@@ -336,7 +336,7 @@ function updateUI({ creator, content }) {
   const box = $('content-preview');
   if (content) {
     box.classList.remove('hidden');
-    $('prev-thumb').src = $('prev-thumb-tone').src = content.thumb || content.thumbUrl || '';
+    $('prev-thumb').src = content.thumb || content.thumbUrl || '';
     $('prev-content-kind').innerText = { reel: 'Reel', post: 'Post', short: 'Short', video: 'Video' }[content.kind] || 'Content';
     $('prev-caption').innerText = content.caption || 'No caption';
     const bits = [];
@@ -374,7 +374,7 @@ fetchBtn.addEventListener('click', async () => {
     if (current.content && current.content.thumbUrl) {
       const ref = current;
       thumbToDataUrl(current.content.thumbUrl).then(d => {
-        if (current === ref) { ref.content.thumb = d; $('prev-thumb').src = $('prev-thumb-tone').src = d; }
+        if (current === ref) { ref.content.thumb = d; $('prev-thumb').src = d; }
       });
     }
   } catch (e) {

@@ -10,13 +10,20 @@
 </head>
 <body>
   <nav class="top">
-    <a class="mark" href="#" id="home-link"><span class="dot"></span>Creator Scout</a>
-    <div class="top-actions">
+    <div class="brandmark">
+      <a class="mark" href="#" id="home-link"><svg class="logo-mark" viewBox="0 0 32 32" fill="none" aria-hidden="true"><rect x="3.6" y="9.5" width="8" height="14" rx="2" transform="rotate(-16 7.6 16.5)" fill="#EDEDED" fill-opacity="0.5"/><rect x="20.4" y="9.5" width="8" height="14" rx="2" transform="rotate(16 24.4 16.5)" fill="#EDEDED" fill-opacity="0.5"/><rect x="10.75" y="5.5" width="10.5" height="19" rx="2.6" fill="#A6FF3D"/><path d="M14.4 11.6 L19.2 15 L14.4 18.4 Z" fill="#000"/></svg><span>Creator Scout</span></a>
       <span id="sync-state" class="sync-state"></span>
-      <button id="sample-btn" class="ghost-btn">Load sample board</button>
+    </div>
+    <div class="top-actions">
       <button id="new-brand" class="ghost-btn">New brand</button>
-      <button id="copy-links" class="ghost-btn">Copy links</button>
       <a class="ghost-btn" href="sheet.html">Open sheet</a>
+      <div class="pop-anchor">
+        <button id="more-btn" class="ghost-btn icon-btn" aria-haspopup="true" aria-label="More">···</button>
+        <div id="more-pop" class="menu-pop hidden" role="menu">
+          <button id="sample-btn" role="menuitem">Load sample board</button>
+          <button id="copy-links" role="menuitem">Copy links in this view</button>
+        </div>
+      </div>
     </div>
   </nav>
 
@@ -42,6 +49,10 @@
     <div class="controls-row">
       <div id="filters" class="filters"></div>
       <div id="reel-tools" class="reel-tools hidden">
+        <div class="pop-anchor">
+          <button id="filters-btn" class="ghost-btn filters-btn" aria-haspopup="true">Filters</button>
+          <div id="filters-pop" class="filters-pop hidden" role="dialog" aria-label="Filters"></div>
+        </div>
         <button id="add-links-btn" class="ghost-btn">+ Add reel links</button>
         <div id="layout-toggle" class="seg" role="group" aria-label="Layout">
           <button data-layout="carousel" class="on">Carousel</button>

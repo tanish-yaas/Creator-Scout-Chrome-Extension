@@ -10,7 +10,7 @@ const S = {
   taxonomy: { brands: {}, meta: {}, festive: [] },
   brand: null,            // null = brands view; otherwise brand name or '__unfiled'
   tab: 'reels',           // inside a brand: 'reels' | 'creators'
-  niche: null,
+  niches: new Set(),
   festive: new Set(),
   platform: 'all',
   q: '',
@@ -151,7 +151,7 @@ function reelItems() {
   const q = S.q.toLowerCase();
   return brandRecords().filter(r =>
     isContent(r) &&
-    (!S.niche || (r.niche || NO_NICHE) === S.niche) &&
+    (!S.niches.size || S.niches.has(r.niche || NO_NICHE)) &&
     passesFilters(r) && matchesQuery(r, q)
   ).map(r => ({ kind: 'reel', key: r.id, rec: r }));
 }
@@ -190,45 +190,73 @@ function renderHero() {
   }
 }
 
-function renderFilters() {
-  if (S.brand !== null && S.tab === 'creators') { $('filters').innerHTML = ''; return; }
-  const scope = (S.brand === null ? S.records : brandRecords()).filter(r => S.brand === null || isContent(r));
-  let html = '';
-
-  if (S.brand !== null) {
-    const niches = nicheCounts(scope);
-    if (niches.length > 1 || S.niche) {
-      html += `<div class="pill-row">
-        <button class="fpill ${!S.niche ? 'on' : ''}" data-niche="">All niches <span>${scope.length}</span></button>
-        ${niches.map(([n, c]) => `<button class="fpill ${S.niche === n ? 'on' : ''}" data-niche="${esc(n)}">${esc(n)} <span>${c}</span></button>`).join('')}
-      </div>`;
-    }
-  }
-
-  const fc = {};
-  scope.forEach(r => (r.festive || []).forEach(f => { fc[f] = (fc[f] || 0) + 1; }));
-  // Festive tags are only offered inside a brand, not on the home screen
-  const tags = S.brand === null ? [] : S.taxonomy.festive.filter(f => fc[f.name] || S.festive.has(f.name));
-  const platforms = new Set(scope.map(r => r.platform));
-  const showPlat = platforms.size > 1 || S.platform !== 'all';
-  if (tags.length || showPlat) {
-    html += `<div class="pill-row">
-      ${tags.map(f => `<button class="fpill festive ${S.festive.has(f.name) ? 'on' : ''}" data-festive="${esc(f.name)}" style="--c:${f.color}">${f.emoji} ${esc(f.name)} <span>${fc[f.name] || 0}</span></button>`).join('')}
-      ${showPlat ? `${tags.length ? '<span class="sep"></span>' : ''}
-        ${['all', 'Instagram', 'YouTube'].map(p => `<button class="fpill ${S.platform === p ? 'on' : ''}" data-platform="${p}">${p === 'all' ? 'Both' : p}</button>`).join('')}` : ''}
-    </div>`;
-  }
-  $('filters').innerHTML = html;
+// Filters live in one menu next to Carousel / Grid: niches, festive tags and platform
+function activeFilterCount() {
+  return S.niches.size + S.festive.size + (S.platform !== 'all' ? 1 : 0);
 }
 
-$('filters').addEventListener('click', e => {
+function renderFilters() {
+  $('filters').innerHTML = '';
+  const btn = $('filters-btn');
+  if (!btn) return;
+  const n = activeFilterCount();
+  btn.innerHTML = `Filters${n ? ` <span class="fcount">${n}</span>` : ''}`;
+  btn.classList.toggle('on', n > 0);
+  if (!$('filters-pop').classList.contains('hidden')) renderFiltersPop();
+}
+
+function renderFiltersPop() {
+  const scope = brandRecords().filter(isContent);
+  const niches = nicheCounts(scope);
+  const fc = {};
+  scope.forEach(r => (r.festive || []).forEach(f => { fc[f] = (fc[f] || 0) + 1; }));
+  const tags = [...S.taxonomy.festive].sort((a, b) => (fc[b.name] || 0) - (fc[a.name] || 0));
+  const platforms = new Set(scope.map(r => r.platform));
+  const showing = reelItems().length;
+  $('filters-pop').innerHTML = `
+    <div class="fp-sec">
+      <p class="fp-label">Niche</p>
+      <div class="fp-chips">${niches.length ? niches.map(([nm, c]) => `<button class="fpill ${S.niches.has(nm) ? 'on' : ''}" data-niche="${esc(nm)}">${esc(nm)} <span>${c}</span></button>`).join('') : '<span class="fp-none">No niches yet</span>'}</div>
+    </div>
+    <div class="fp-sec">
+      <p class="fp-label">Festive</p>
+      <div class="fp-chips">${tags.map(f => `<button class="fpill festive ${S.festive.has(f.name) ? 'on' : ''} ${fc[f.name] ? '' : 'zero'}" data-festive="${esc(f.name)}" style="--c:${f.color}">${f.emoji} ${esc(f.name)} <span>${fc[f.name] || 0}</span></button>`).join('')}</div>
+    </div>
+    ${platforms.size > 1 || S.platform !== 'all' ? `<div class="fp-sec">
+      <p class="fp-label">Platform</p>
+      <div class="fp-chips">${['all', 'Instagram', 'YouTube'].map(pl => `<button class="fpill ${S.platform === pl ? 'on' : ''}" data-platform="${pl}">${pl === 'all' ? 'Both' : pl}</button>`).join('')}</div>
+    </div>` : ''}
+    <div class="fp-foot">
+      <span>${showing} of ${scope.length} ${scope.length === 1 ? 'reel' : 'reels'} shown</span>
+      <button class="link-btn" data-clear="1" ${activeFilterCount() ? '' : 'disabled'}>Clear filters</button>
+    </div>`;
+}
+
+$('more-btn').addEventListener('click', e => { e.stopPropagation(); $('more-pop').classList.toggle('hidden'); });
+document.addEventListener('mousedown', e => {
+  if (!e.target.closest('#more-pop') && !e.target.closest('#more-btn')) $('more-pop').classList.add('hidden');
+});
+$('more-pop').addEventListener('click', () => setTimeout(() => $('more-pop').classList.add('hidden'), 0));
+
+$('filters-btn').addEventListener('click', e => {
+  e.stopPropagation();
+  const pop = $('filters-pop');
+  pop.classList.toggle('hidden');
+  if (!pop.classList.contains('hidden')) renderFiltersPop();
+});
+document.addEventListener('mousedown', e => {
+  if (!e.target.closest('#filters-pop') && !e.target.closest('#filters-btn')) $('filters-pop').classList.add('hidden');
+});
+$('filters-pop').addEventListener('click', e => {
   const b = e.target.closest('button');
   if (!b) return;
-  if ('niche' in b.dataset) S.niche = b.dataset.niche || null;
+  if ('niche' in b.dataset) { const nm = b.dataset.niche; S.niches.has(nm) ? S.niches.delete(nm) : S.niches.add(nm); }
   if ('festive' in b.dataset) { const f = b.dataset.festive; S.festive.has(f) ? S.festive.delete(f) : S.festive.add(f); }
   if ('platform' in b.dataset) S.platform = b.dataset.platform;
+  if (b.dataset.clear) { S.niches.clear(); S.festive.clear(); S.platform = 'all'; }
   S.index = -1;
   render();
+  renderFiltersPop();
 });
 
 let qTimer;
@@ -402,26 +430,34 @@ function cardHTML(item, i) {
   </article>`;
 }
 
-// ---------- carousel geometry ----------
+// ---------- carousel: a wheel that loops forever ----------
+// Cards sit on a ring of "slots". With only a few items the ring repeats them, so scrolling past
+// the last card flows straight into the first one with no gap. pos / target are in slot units.
 
-let pos = 0;
+let pos = 0;          // where the wheel is right now (fractional while moving)
+let target = 0;       // where it's heading
+let raf = 0;
 let cardEls = [];
+let slots = 0;
+let G = null;         // cached geometry
+let activeSlot = -1;
 
 const PERSPECTIVE = 1500;
+const MIN_SLOTS = 11;   // enough slots that a card never shows twice in view at the same time... unless there are very few items
+
 // Card size comes from the space the stage actually has, so the whole carousel fits on screen
 function geometry() {
   const w = window.innerWidth;
   const reel = S.brand !== null;
   const ratio = reel ? 16 / 9 : 1.32;
   const R = Math.max(900, w * 0.95);
-  const stageEl = $('stage');
-  const avail = Math.max(220, (stageEl.clientHeight || window.innerHeight * 0.55) - 46);
+  const avail = Math.max(220, ($('stage').clientHeight || window.innerHeight * 0.55) - 40);
   let cardW = reel ? Math.max(130, Math.min(200, w * 0.135)) : Math.max(160, Math.min(260, w * 0.17));
-  let gap = Math.max(18, w * 0.016);
-  let step = 0, cardH = 0;
+  const gap = Math.max(18, w * 0.016);
+  let cardH = 0;
   for (let k = 0; k < 4; k++) {
     cardH = cardW * ratio;
-    step = Math.asin(Math.min(0.9, (cardW + gap) / R));
+    const step = Math.asin(Math.min(0.9, (cardW + gap) / R));
     // Outer cards come closer and look bigger; make sure they fit too
     const z = R * (1 - Math.cos(2.6 * step)) * 0.85;
     const grow = PERSPECTIVE / (PERSPECTIVE - z);
@@ -429,64 +465,83 @@ function geometry() {
     cardW = cardW * (avail / (cardH * grow)) * 0.98;
   }
   cardH = cardW * ratio;
-  return { cardW, cardH, gap, R, step: Math.asin(Math.min(0.9, (cardW + gap) / R)), avail };
+  return { cardW, cardH, gap, R, step: Math.asin(Math.min(0.9, (cardW + gap) / R)), avail, px: cardW + gap };
 }
 
-const looping = () => S.items.length >= 5;
+const looping = () => slots > 1;
 function wrapD(d) {
-  const n = S.items.length;
   if (!looping()) return d;
-  return ((d % n) + n * 1.5) % n - n / 2;
+  return ((d % slots) + slots * 1.5) % slots - slots / 2;
 }
-const norm = i => {
-  const n = S.items.length;
-  return looping() ? ((Math.round(i) % n) + n) % n : Math.max(0, Math.min(n - 1, Math.round(i)));
-};
+const slotOf = p => looping() ? ((Math.round(p) % slots) + slots) % slots : 0;
 
-function layout(p = S.index, animate = true) {
-  const g = geometry();
+function layout(p = pos) {
+  if (!G || !cardEls.length) return;
   const ring = $('ring');
-  ring.style.setProperty('--cw', g.cardW + 'px');
-  ring.style.setProperty('--ch', g.cardH + 'px');
-  ring.style.height = g.avail + 'px';
-  ring.classList.toggle('no-anim', !animate);
-  const active = norm(p);
-  cardEls.forEach((c, i) => {
-    const d = wrapD(i - p);
+  ring.style.setProperty('--cw', G.cardW + 'px');
+  ring.style.setProperty('--ch', G.cardH + 'px');
+  ring.style.height = G.avail + 'px';
+  const act = slotOf(p);
+  cardEls.forEach((c, k) => {
+    const d = wrapD(k - p);
     const ad = Math.abs(d);
-    if (c._d !== undefined && Math.abs(d - c._d) > S.items.length / 2) {
-      c.style.transition = 'none';
-      requestAnimationFrame(() => requestAnimationFrame(() => { c.style.transition = ''; }));
-    }
-    c._d = d;
-    const t = d * g.step;
-    const x = g.R * Math.sin(t);
-    const z = g.R * (1 - Math.cos(t)) * 0.85;
+    const t = d * G.step;
+    const x = G.R * Math.sin(t);
+    const z = G.R * (1 - Math.cos(t)) * 0.85;
     const ry = -t * (180 / Math.PI) * 1.05;
     c.style.transform = `translate3d(${x}px, 0, ${z}px) rotateY(${ry}deg)`;
-    const hide = ad > 3.6;
-    c.style.opacity = hide ? 0 : 1;
-    c.style.visibility = ad > 4.2 ? 'hidden' : '';
-    c.style.pointerEvents = hide ? 'none' : '';
-    c.style.zIndex = String(100 - Math.round(ad * 10));
-    c.classList.toggle('active', i === active);
-    c.classList.toggle('near', ad < 1.5 && i !== active);
-    if (i === active && c.style.getPropertyValue('--glow')) setHalo(c.style.getPropertyValue('--glow'));
+    // Smooth fade at the edges of the wheel and a gentle dim away from the middle
+    const op = Math.max(0, Math.min(1, (3.7 - ad) / 0.9));
+    c.style.opacity = op;
+    c.style.visibility = op <= 0.01 ? 'hidden' : '';
+    c.style.pointerEvents = op < 0.5 ? 'none' : '';
+    c.style.zIndex = String(1000 - Math.round(ad * 100));
+    c.style.setProperty('--dim', (1 - Math.min(ad, 1.6) * 0.24).toFixed(3));
+    c.classList.toggle('active', k === act);
   });
-  $('counter').textContent = S.items.length ? `${String(active + 1).padStart(2, '0')} / ${String(S.items.length).padStart(2, '0')}` : '';
-  $('prev').disabled = !looping() && active <= 0;
-  $('next').disabled = !looping() && active >= S.items.length - 1;
+  if (act !== activeSlot) {
+    activeSlot = act;
+    const n = S.items.length;
+    S.index = n ? act % n : 0;
+    const el = cardEls[act];
+    if (el && el.style.getPropertyValue('--glow')) setHalo(el.style.getPropertyValue('--glow'));
+    renderInfo();
+  }
+  const n = S.items.length;
+  $('counter').textContent = n ? `${String(S.index + 1).padStart(2, '0')} / ${String(n).padStart(2, '0')}` : '';
+  $('prev').disabled = $('next').disabled = n < 2;
 }
 
+// Ease toward the target every frame (fast at first, settling softly)
+function tick() {
+  raf = 0;
+  if (!(drag && drag.moved)) {
+    const diff = target - pos;
+    pos = Math.abs(diff) < 0.0008 ? target : pos + diff * 0.14;
+  }
+  layout(pos);
+  if (pos !== target && !(drag && drag.moved)) raf = requestAnimationFrame(tick);
+}
+function animateTo(t) {
+  target = looping() ? t : 0;
+  if (!raf) raf = requestAnimationFrame(tick);
+}
+// Move by whole cards from wherever the wheel is heading
+function step(delta) { animateTo(Math.round(target) + delta); }
+
+// Bring item i to the middle, going the short way round the wheel
 function go(i, animate = true) {
-  if (!S.items.length) return;
-  const target = looping() ? i : Math.max(0, Math.min(S.items.length - 1, i));
-  const n = norm(target);
-  const changed = n !== S.index;
-  S.index = n;
-  pos = looping() ? target : n;
-  layout(pos, animate);
-  if (changed || !animate) renderInfo();
+  const n = S.items.length;
+  if (!n) return;
+  i = ((i % n) + n) % n;
+  let best = null;
+  for (let k = i; k < slots; k += n) {
+    const d = wrapD(k - target);
+    if (best === null || Math.abs(d) < Math.abs(best)) best = d;
+  }
+  const t = Math.round(target + (best || 0));
+  if (animate) animateTo(t);
+  else { target = pos = looping() ? t : 0; activeSlot = -1; layout(pos); }
 }
 
 function buildStage() {
@@ -494,18 +549,23 @@ function buildStage() {
     ? it.recs.length + ':' + JSON.stringify(metaOf(it.name)) + ':' + thumbsFor(it).join('').length
     : (it.rec.thumb || '').length + ':' + (it.rec.festive || []).join() + ':' + it.rec.niche)).join(',');
   const ring = $('ring');
+  const n = S.items.length;
+  if (S.index < 0) S.index = Math.floor(n / 2);
+  S.index = Math.min(S.index, Math.max(0, n - 1));
   if (key !== S.itemsKey) {
     S.itemsKey = key;
-    ring.innerHTML = S.items.map(cardHTML).join('');
+    slots = n <= 1 ? n : n * Math.ceil(MIN_SLOTS / n);
+    const html = [];
+    for (let k = 0; k < slots; k++) html.push(cardHTML(S.items[k % n], k % n).replace('<article class="card', `<article data-slot="${k}" class="card`));
+    ring.innerHTML = html.join('');
     cardEls = [...ring.querySelectorAll('.card')];
     cardEls.forEach(c => c.querySelectorAll('img').forEach(img => img.addEventListener('error', () => img.remove(), { once: true })));
     applyGlows(ring);
+    pos = target = S.index;
+    activeSlot = -1;
   }
-  if (S.index < 0) S.index = Math.floor(S.items.length / 2);
-  S.index = Math.min(S.index, Math.max(0, S.items.length - 1));
-  pos = S.index;
-  layout(S.index, false);
-  requestAnimationFrame(() => $('ring').classList.remove('no-anim'));
+  G = geometry();
+  layout(pos);
 }
 
 // ---------- grid ----------
@@ -531,7 +591,7 @@ $('layout-toggle').addEventListener('click', e => {
   if (b) setLayout(b.dataset.layout);
 });
 
-// ---------- interaction (drag, wheel, keys) ----------
+// ---------- interaction: drag with momentum, wheel / trackpad glide, keys ----------
 
 const stage = $('stage');
 let drag = null;
@@ -539,15 +599,21 @@ let drag = null;
 function endDrag(e, cancelled) {
   if (!drag) return;
   const wasDrag = drag.moved;
+  const d = drag;
   drag = null;
   stage.classList.remove('dragging');
-  if (wasDrag) { go(Math.round(pos)); return; }
+  if (wasDrag) {
+    // Fling: carry the release speed for a moment, then settle on a card
+    const v = d.v || 0;
+    animateTo(Math.round(pos + Math.max(-4, Math.min(4, v * 240))));
+    return;
+  }
   if (cancelled || !e) return;
   const c = e.target.closest && e.target.closest('.card');
   if (!c || !stage.contains(c)) return;
-  const i = +c.dataset.i;
-  if (i !== S.index) go(Math.round(pos) + Math.round(wrapD(i - pos)));
-  else activate(S.items[i]);
+  const k = +c.dataset.slot;
+  if (k !== activeSlot) animateTo(Math.round(target + wrapD(k - target)));
+  else activate(S.items[S.index]);
 }
 
 stage.addEventListener('click', e => {
@@ -556,48 +622,52 @@ stage.addEventListener('click', e => {
 });
 stage.addEventListener('pointerdown', e => {
   if (e.button !== 0 || e.target.closest('.arrow') || e.target.closest('.card-del')) return;
-  drag = { x: e.clientX, y: e.clientY, start: pos, moved: false, id: e.pointerId };
+  drag = { x: e.clientX, y: e.clientY, start: pos, moved: false, id: e.pointerId, lastX: e.clientX, lastT: performance.now(), v: 0 };
 });
 window.addEventListener('pointermove', e => {
   if (!drag) return;
-  // The button was released somewhere we didn't hear about: stop dragging
   if (e.pointerType === 'mouse' && e.buttons === 0) { endDrag(null, true); return; }
   const dx = e.clientX - drag.x;
   const dy = e.clientY - drag.y;
   if (!drag.moved) {
-    if (Math.abs(dy) > 10 && Math.abs(dy) > Math.abs(dx)) { drag = null; return; } // vertical swipe: let the page scroll
+    if (Math.abs(dy) > 10 && Math.abs(dy) > Math.abs(dx)) { drag = null; return; }
     if (Math.abs(dx) < 6) return;
     drag.moved = true;
     try { stage.setPointerCapture(drag.id); } catch (err) { /* ignore */ }
     stage.classList.add('dragging');
+    cancelAnimationFrame(raf); raf = 0;
   }
-  const g = geometry();
-  pos = drag.start - dx / (g.cardW + g.gap);
-  if (!looping()) pos = Math.max(-0.4, Math.min(S.items.length - 0.6, pos));
-  layout(pos, false);
+  const px = (G && G.px) || 220;
+  const now = performance.now();
+  const dt = Math.max(1, now - drag.lastT);
+  // speed in cards per millisecond, smoothed
+  drag.v = drag.v * 0.6 + (-(e.clientX - drag.lastX) / px / dt) * 0.4;
+  drag.lastX = e.clientX; drag.lastT = now;
+  pos = target = looping() ? drag.start - dx / px : 0;
+  layout(pos);
 });
 window.addEventListener('pointerup', e => endDrag(e, false));
 window.addEventListener('pointercancel', () => endDrag(null, true));
 window.addEventListener('blur', () => endDrag(null, true));
 
-// Only sideways scrolling (trackpad swipe or Shift + wheel) moves the carousel; normal scrolling scrolls the page
-let wheelAcc = 0, wheelLock = false;
+// Trackpad and mouse wheel glide the wheel, then it settles on the nearest card
+let snapTimer = 0;
 stage.addEventListener('wheel', e => {
-  const sideways = Math.abs(e.deltaX) > Math.abs(e.deltaY) * 1.2;
-  if (!sideways && !e.shiftKey) return;
+  if (!looping()) return;
   e.preventDefault();
-  if (wheelLock) return;
-  wheelAcc += sideways ? e.deltaX : e.deltaY;
-  if (Math.abs(wheelAcc) > 40) {
-    go(Math.round(pos) + Math.sign(wheelAcc));
-    wheelAcc = 0;
-    wheelLock = true;
-    setTimeout(() => { wheelLock = false; }, 280);
-  }
+  let d = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
+  if (e.deltaMode === 1) d *= 40;            // scrolling by lines
+  const px = (G && G.px) || 220;
+  target += d / Math.max(120, px * 0.55);
+  // never let a hard flick race too far ahead
+  target = Math.max(pos - 5, Math.min(pos + 5, target));
+  if (!raf) raf = requestAnimationFrame(tick);
+  clearTimeout(snapTimer);
+  snapTimer = setTimeout(() => animateTo(Math.round(target)), 120);
 }, { passive: false });
 
-$('prev').addEventListener('click', () => go(Math.round(pos) - 1));
-$('next').addEventListener('click', () => go(Math.round(pos) + 1));
+$('prev').addEventListener('click', () => step(-1));
+$('next').addEventListener('click', () => step(1));
 
 document.addEventListener('keydown', e => {
   if (!$('confirm').classList.contains('hidden')) { if (e.key === 'Escape') closeConfirm(false); return; }
@@ -608,13 +678,14 @@ document.addEventListener('keydown', e => {
     return;
   }
   if (!$('brand-modal').classList.contains('hidden')) { if (e.key === 'Escape') closeBrandModal(); return; }
+  if (!$('filters-pop').classList.contains('hidden') && e.key === 'Escape') { $('filters-pop').classList.add('hidden'); return; }
   if (e.target.matches('input, textarea, select')) {
     if (e.key === 'Escape') e.target.blur();
     return;
   }
   const carousel = !$('stage').classList.contains('hidden');
-  if (carousel && e.key === 'ArrowRight') { e.preventDefault(); go(Math.round(pos) + 1); }
-  else if (carousel && e.key === 'ArrowLeft') { e.preventDefault(); go(Math.round(pos) - 1); }
+  if (carousel && e.key === 'ArrowRight') { e.preventDefault(); step(1); }
+  else if (carousel && e.key === 'ArrowLeft') { e.preventDefault(); step(-1); }
   else if (carousel && e.key === 'Enter' && S.items[S.index]) activate(S.items[S.index]);
   else if (e.key === 'Escape' && S.brand !== null) goHome();
   else if (e.key === '/') { e.preventDefault(); $('search').focus(); }
@@ -624,7 +695,7 @@ document.addEventListener('keydown', e => {
 let fitFrame = 0;
 new ResizeObserver(() => {
   cancelAnimationFrame(fitFrame);
-  fitFrame = requestAnimationFrame(() => { if (!$('stage').classList.contains('hidden') && cardEls.length) layout(pos, false); });
+  fitFrame = requestAnimationFrame(() => { if (!$('stage').classList.contains('hidden') && cardEls.length) { G = geometry(); layout(pos); } });
 }).observe($('stage'));
 
 function activate(item) {
@@ -637,7 +708,9 @@ function openBrand(name) {
   S.homeIndex = S.index;
   S.brand = name;
   S.tab = brandRecordsFor(name).some(isContent) ? 'reels' : 'creators';
-  S.niche = null;
+  S.niches.clear();
+  S.festive.clear();
+  S.platform = 'all';
   S.q = '';
   $('search').value = '';
   S.index = -1;
@@ -648,8 +721,10 @@ const brandRecordsFor = name => S.records.filter(r => brandOf(r) === name);
 
 function goHome() {
   S.brand = null;
-  S.niche = null;
+  S.niches.clear();
   S.festive.clear();
+  S.platform = 'all';
+  $('filters-pop').classList.add('hidden');
   S.tab = 'reels';
   S.layout = 'carousel';
   S.q = '';
@@ -767,7 +842,8 @@ $('add-links-btn').addEventListener('click', () => {
   f.classList.toggle('hidden');
   if (!f.classList.contains('hidden')) {
     $('links-niches').innerHTML = (S.taxonomy.brands[S.brand] || []).map(n => `<option value="${esc(n)}">`).join('');
-    $('links-niche').value = S.niche && S.niche !== NO_NICHE ? S.niche : '';
+    const one = S.niches.size === 1 ? [...S.niches][0] : '';
+    $('links-niche').value = one && one !== NO_NICHE ? one : '';
     $('links-input').focus();
   }
 });
@@ -1232,7 +1308,7 @@ function render() {
     S.itemsKey = '';
     $('ring').innerHTML = '';
     cardEls = [];
-    $('info').innerHTML = (S.q || S.festive.size || S.platform !== 'all' || S.niche)
+    $('info').innerHTML = (S.q || activeFilterCount())
       ? `<p class="empty">Nothing matches. Clear the search or a filter to see more.</p>`
       : S.brand !== null ? `<p class="empty">No reels for ${esc(brandLabel(S.brand))} yet. Use “+ Add reel links”, or open a reel and save it with the extension.</p>` : '';
     return;

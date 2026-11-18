@@ -1,4 +1,4 @@
-# Creator Scout v4.2 🕵️‍♂️
+# Creator Scout v4.3 🕵️‍♂️
 
 Creator Scout is a Chrome extension for scouting Instagram and YouTube creators and their content. Everything you save stays inside the extension. You copy it into any Google Sheet when you want, it still syncs to the master database, and it lands on a moodboard grouped by brand and niche.
 
@@ -9,9 +9,9 @@ Creator Scout is a Chrome extension for scouting Instagram and YouTube creators 
 * **Moodboard dashboard:**
   * The home screen is a curved carousel with one card per brand, sized to fit on one screen. Each card glows in its own colours, taken automatically from its logo or reel cover, and the background glow follows the card in the middle.
   * Use **Edit card** to upload the brand's logo and pick a card colour, and **New brand** to add one.
-  * Drag, swipe, use the arrow keys, or scroll sideways (trackpad or Shift + wheel) to move the carousel.
+  * The carousel is a wheel that loops forever: scroll (trackpad or mouse wheel), drag with momentum, or use the arrow keys, and it glides and settles on a card. With only a few brands, the wheel repeats them so there's never an empty gap.
   * Open a brand to get two tabs:
-    * **Reels**: a carousel or grid of its reels, with niche and festive filters. Click a reel to play it embedded (Instagram or YouTube). The player panel shows the creator and stats, and that's where you change its brand, niche and festive tags or remove it. Use **+ Add reel links** to paste reference links; they're looked up and added with their creators.
+    * **Reels**: a carousel or grid of its reels. The **Filters** menu next to Carousel / Grid filters by niche, festive tag and platform. Click a reel to play it embedded (Instagram or YouTube). The player panel shows the creator and stats, and that's where you change its brand, niche and festive tags or remove it. Use **+ Add reel links** to paste reference links; they're looked up and added with their creators.
     * **Creators**: everyone saved for that brand, with followers, tier, niches, reel count and who saved them. **Copy list for Sheets** copies the table.
   * Double-click a brand's title to rename it for everyone.
   * **Deleting:** hover a reel and press × (or **Delete this reel** in the player) and confirm. To delete a whole brand, open **Edit card → Delete brand** and type the brand's name to confirm, like deleting a GitHub repo.
@@ -46,7 +46,7 @@ Each save POSTs JSON to `MASTER_WEBHOOK_URL` (in `config.js`, same URL as before
 | `platforms.js` | Instagram and YouTube lookups shared by the popup and dashboard |
 | `team-backend/` | Apps Script for the shared team database, and its setup guide |
 | `moodboard.html / moodboard.js / moodboard.css` | The moodboard dashboard |
-| `icons/` | Extension icon (16, 32, 48, 128 px) |
+| `icons/` | The logo (`logo.svg`) and extension icon (16, 32, 48, 128 px) |
 | `fonts/` | Bundled Scout Pixel (headline font made for this extension) and Inter (SIL Open Font License) |
 
 Each browser keeps a local copy, so pages open instantly and work offline. The team database is the shared source of truth. Thumbnails are saved as small copies, so they don't break when Instagram's image links expire.

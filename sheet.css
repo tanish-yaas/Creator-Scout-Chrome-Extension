@@ -192,3 +192,5 @@ tbody tr:hover td.sel, tbody tr:hover td.sr { background: #0b0b0b !important; }
 tr.is-sel td.sel, tr.is-sel td.sr { background: #0c1407 !important; }
 td.sr { box-shadow: 1px 0 0 var(--line); }
 tr.fresh td.sr { box-shadow: inset 2px 0 0 var(--acid), 1px 0 0 var(--line); }
+
+.mark .logo-mark { width: 20px; height: 20px; filter: drop-shadow(0 0 6px rgba(166, 255, 61, 0.35)); }

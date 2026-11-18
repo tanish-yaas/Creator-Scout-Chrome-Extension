@@ -241,3 +241,11 @@ footer #status-msg { flex: 1; text-align: left; min-width: 0; }
 .who-form { display: flex; gap: 6px; width: 100%; }
 .who-form input[type="text"] { flex: 1; }
 .who-form .ghost { padding: 6px 12px; }
+
+.logo-mark { width: 22px; height: 22px; flex-shrink: 0; filter: drop-shadow(0 0 6px rgba(166, 255, 61, 0.35)); }
+.brand { gap: 8px; }
+.brand-dot { width: 6px; height: 6px; margin-left: 2px; }
+body { overflow-x: hidden; }
+footer { flex-wrap: nowrap; }
+footer #status-msg { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.whoami { flex-shrink: 0; }

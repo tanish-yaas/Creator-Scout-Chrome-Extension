@@ -26,6 +26,7 @@ const FESTIVE_VISIBLE = 4;
 
 function showStatus(text, className = '') {
   statusMsg.innerText = text;
+  statusMsg.title = text;
   statusMsg.className = className;
 }
 function setDot(state) {

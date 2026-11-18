@@ -500,9 +500,6 @@ body {
 
 /* depth without the black-and-white effect: side cards are just a little dimmer */
 .layer { transition: filter 0.5s ease; }
-.ring .card:not(.active) .layer { filter: brightness(0.62) saturate(0.9); }
-.ring .card.near .layer { filter: brightness(0.74) saturate(0.95); }
-.ring .card:not(.active) .cap { opacity: 0.85; }
 
 /* ---------- one-screen layout for carousel views ---------- */
 
@@ -607,3 +604,57 @@ body.fit .title-row .ghost-btn { padding: 6px 12px; }
 .cf-text b { color: var(--text); font-weight: 500; }
 #cf-type-wrap { margin-top: 8px; }
 #cf-type-wrap b { color: var(--text); font-weight: 500; }
+
+/* ---------- v4.3: the wheel is animated frame by frame in JS ---------- */
+.ring .card { transition: box-shadow 0.4s ease; will-change: transform, opacity; }
+.ring .card .layer { filter: brightness(var(--dim, 1)) saturate(calc(0.75 + var(--dim, 1) * 0.25)); transition: none; }
+.ring .card.active .layer { filter: none; }
+.ring .card:not(.active) .cap { opacity: calc(0.4 + var(--dim, 1) * 0.6); }
+.stage { cursor: grab; }
+
+/* ---------- v4.3: top bar, logo, centred composition ---------- */
+
+.brandmark { display: flex; align-items: center; gap: 14px; }
+.mark { gap: 10px; font-size: 15px; }
+.mark .logo-mark { width: 26px; height: 26px; filter: drop-shadow(0 0 8px rgba(166, 255, 61, 0.35)); }
+.top .sync-state { margin: 0; padding: 4px 10px; border: 1px solid var(--line); border-radius: 999px; font-size: 11.5px; }
+.icon-btn { padding: 7px 13px; letter-spacing: 1px; }
+.pop-anchor { position: relative; }
+.menu-pop, .filters-pop {
+  position: absolute; top: calc(100% + 8px); right: 0; z-index: 300;
+  background: #0a0a0a; border: 1px solid var(--line-strong); border-radius: 14px;
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.6);
+}
+.menu-pop { min-width: 220px; padding: 6px; display: flex; flex-direction: column; }
+.menu-pop button {
+  background: none; border: 0; text-align: left; padding: 9px 12px; border-radius: 9px;
+  font-size: 13px; font-weight: 400; color: var(--text);
+}
+.menu-pop button:hover { background: rgba(255, 255, 255, 0.07); }
+.menu-pop button:disabled { opacity: 0.4; }
+
+.filters-pop { left: 0; right: auto; width: min(420px, 86vw); padding: 14px; text-align: left; }
+.fp-sec + .fp-sec { margin-top: 12px; }
+.fp-label { margin: 0 0 7px; font-size: 11.5px; color: var(--dim); }
+.fp-chips { display: flex; flex-wrap: wrap; gap: 6px; max-height: 132px; overflow: auto; }
+.fp-chips .fpill.zero { opacity: 0.55; }
+.fp-none { font-size: 12.5px; color: var(--mute); }
+.fp-foot { display: flex; justify-content: space-between; align-items: center; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); font-size: 12px; color: var(--dim); }
+.fp-foot .link-btn:disabled { opacity: 0.35; cursor: default; }
+.filters-btn.on { color: var(--text); border-color: color-mix(in srgb, var(--halo) 55%, transparent); }
+.fcount {
+  display: inline-grid; place-items: center; min-width: 18px; height: 18px; margin-left: 4px; padding: 0 5px;
+  border-radius: 999px; background: var(--halo); color: #000; font-size: 11px; font-weight: 500;
+}
+
+/* centred, balanced composition for the carousel screens */
+body.fit .top { padding: 16px 28px 0; }
+body.fit .hero { padding-top: clamp(14px, 6vh, 64px); }
+body.fit .title { line-height: 1.12; }
+body.fit .hero > .search-row { margin-top: clamp(12px, 3vh, 26px); }
+body.fit .stage { margin-top: clamp(4px, 2vh, 20px); }
+body.fit .info { padding-bottom: clamp(16px, 5vh, 52px); margin-top: clamp(4px, 1.5vh, 14px); }
+body.fit .counter { margin-top: 6px; }
+body.fit.in-brand .hero { padding-top: clamp(8px, 3vh, 36px); }
+body.fit.in-brand .back { top: 4px; }
+.controls-row .filters:empty { display: none; }

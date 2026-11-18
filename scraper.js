@@ -11,12 +11,15 @@ async function scoutScrapeInstagram() {
     const el = doc.querySelector(`meta[property="${key}"], meta[name="${key}"]`);
     return el ? (el.getAttribute('content') || '').trim() : '';
   };
-  const fetchDoc = async (path) => {
+  // Every network read has a time limit, so the popup never waits forever on Instagram
+  const fetchDoc = async (path, ms = 6000) => {
+    const ctl = new AbortController();
+    const timer = setTimeout(() => ctl.abort(), ms);
     try {
-      const res = await fetch(path, { credentials: 'include' });
+      const res = await fetch(path, { credentials: 'include', signal: ctl.signal });
       if (!res.ok) return null;
       return new DOMParser().parseFromString(await res.text(), 'text/html');
-    } catch (e) { return null; }
+    } catch (e) { return null; } finally { clearTimeout(timer); }
   };
   const decode = (s) => {
     const t = document.createElement('textarea');
@@ -73,9 +76,10 @@ async function scoutScrapeInstagram() {
     const kind = parts[ci] === 'p' ? 'post' : 'reel';
     const contentUrl = `https://www.instagram.com/${kind === 'post' ? 'p' : 'reel'}/${code}/`;
 
-    // Instagram is a single-page app, so the live <head> can be stale after navigating.
-    // Fetching the content URL gives fresh meta tags.
-    let doc = await fetchDoc(contentUrl);
+    // Use what's already on the page when its tags belong to this reel (instant);
+    // Instagram is a single-page app, so otherwise fetch fresh tags for this reel.
+    let doc = (meta(document, 'og:url').includes(code) && meta(document, 'og:description')) ? document : null;
+    if (!doc) doc = await fetchDoc(contentUrl);
     if (!meta(doc, 'og:description') && meta(document, 'og:url').includes(code)) doc = document;
 
     const ogDesc = decode(meta(doc, 'og:description'));
@@ -119,7 +123,7 @@ async function scoutScrapeInstagram() {
     // Pull the creator's follower count from their profile page
     const creator = { username, name: '', followers: '', category: '', url: username ? `https://www.instagram.com/${username}/` : '' };
     if (username) {
-      const pdoc = await fetchDoc(`/${username}/`);
+      const pdoc = await fetchDoc(`/${username}/`, 5000);
       const pm = parseProfileMeta(decode(meta(pdoc, 'og:description') || meta(pdoc, 'description')));
       creator.name = pm.name || '';
       creator.followers = pm.followers || '';
@@ -139,7 +143,9 @@ async function scoutScrapeInstagram() {
     url: `https://www.instagram.com/${username}/`
   };
   // Fresh copy of the profile page for the profile picture (and stats, if the header didn't have them)
-  const pdoc = await fetchDoc(`/${username}/`);
+  const liveFresh0 = meta(document, 'og:url').toLowerCase().includes(`/${username.toLowerCase()}/`);
+  const haveAll = creator.followers && creator.name && liveFresh0 && meta(document, 'og:image');
+  const pdoc = haveAll ? null : await fetchDoc(`/${username}/`, 5000);
   const liveFresh = meta(document, 'og:url').toLowerCase().includes(`/${username.toLowerCase()}/`);
   const src = meta(pdoc, 'og:description') ? pdoc : (liveFresh ? document : null);
   creator.avatarUrl = meta(src, 'og:image');

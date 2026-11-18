@@ -13,6 +13,7 @@
     <a class="mark" href="#" id="home-link"><span class="dot"></span>Creator Scout</a>
     <div class="top-actions">
       <span id="sync-state" class="sync-state"></span>
+      <button id="sample-btn" class="ghost-btn">Load sample board</button>
       <button id="new-brand" class="ghost-btn">New brand</button>
       <button id="copy-links" class="ghost-btn">Copy links</button>
       <a class="ghost-btn" href="sheet.html">Open sheet</a>
@@ -93,10 +94,32 @@
           </div>
         </div>
       </div>
+      <div id="bm-danger" class="danger-zone hidden">
+        <div>
+          <p class="dz-title">Delete this brand</p>
+          <p class="dz-text">Removes the brand card and everything filed under it, for the whole team.</p>
+        </div>
+        <button type="button" id="bm-delete" class="danger-btn">Delete brand</button>
+      </div>
       <p id="bm-error" class="modal-error"></p>
       <div class="modal-actions">
         <button type="button" id="bm-cancel" class="ghost-btn">Cancel</button>
         <button type="submit" id="bm-save" class="glow-pill modal-save">Save card</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Confirm dialog (simple, or type-the-name for brands) -->
+  <div id="confirm" class="modal hidden" role="alertdialog" aria-modal="true" aria-labelledby="cf-title" aria-describedby="cf-text">
+    <form id="cf-form" class="modal-box confirm-box">
+      <h2 id="cf-title" class="modal-title"></h2>
+      <div id="cf-text" class="cf-text"></div>
+      <label id="cf-type-wrap" class="fld hidden"><span id="cf-type-label"></span>
+        <input id="cf-type" type="text" autocomplete="off" spellcheck="false">
+      </label>
+      <div class="modal-actions">
+        <button type="button" id="cf-cancel" class="ghost-btn">Cancel</button>
+        <button type="submit" id="cf-ok" class="danger-btn">Delete</button>
       </div>
     </form>
   </div>

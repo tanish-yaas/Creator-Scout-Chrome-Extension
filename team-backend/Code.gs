@@ -76,6 +76,7 @@ function doPost(e) {
       case 'delete': deleteRecord_(body.id); return json_({ ok: true });
       case 'brand': return json_({ ok: true, brand: saveBrand_(body.name, body.patch || {}) });
       case 'renameBrand': renameBrand_(body.from, body.to); return json_({ ok: true });
+      case 'deleteBrand': return json_({ ok: true, deleted: deleteBrand_(body.name) });
       case 'festive': return json_({ ok: true, festive: saveFestive_(body.festive || []) });
       default: return json_({ ok: false, error: 'Unknown action' });
     }
@@ -289,6 +290,19 @@ function renameBrand_(from, to) {
     old.updatedAt = Date.now();
     bs.getRange(old._row, 1, 1, BRAND_COLUMNS.length).setValues([toRow_(old, BRAND_COLUMNS)]);
   }
+}
+
+// Deletes a brand and everything filed under it (the Make.com master database is separate and untouched)
+function deleteBrand_(name) {
+  if (!name) throw new Error('Brand name is missing');
+  const rs = sheet_('Records', RECORD_COLUMNS);
+  const rows = readObjects_(rs, RECORD_COLUMNS).filter(function (r) { return String(r.brand) === String(name); });
+  // bottom-up so row numbers stay valid while deleting
+  rows.sort(function (a, b) { return b._row - a._row; }).forEach(function (r) { rs.deleteRow(r._row); });
+  const bs = sheet_('Brands', BRAND_COLUMNS);
+  const b = readObjects_(bs, BRAND_COLUMNS).filter(function (r) { return String(r.name) === String(name); })[0];
+  if (b) bs.deleteRow(b._row);
+  return rows.length;
 }
 
 // ---------------------------------------------------------------- festive tags

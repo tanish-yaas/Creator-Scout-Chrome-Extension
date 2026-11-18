@@ -541,3 +541,14 @@ function startTeamSync() {
   document.addEventListener('visibilitychange', () => { if (!document.hidden) pullTeam(); });
   window.addEventListener('online', pullTeam);
 }
+
+// Deletes a brand and every reel / creator row filed under it, for everyone on the team board
+async function deleteBrandEverywhere(name) {
+  const records = await getRecords();
+  await setRecords(records.filter(r => r.brand !== name));
+  const tax = await getTaxonomy();
+  delete tax.brands[name];
+  if (tax.meta) delete tax.meta[name];
+  await setTaxonomy(tax);
+  if (teamOn()) await teamCall('deleteBrand', { name });
+}

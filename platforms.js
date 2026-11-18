@@ -96,12 +96,14 @@ function igMeta(doc, key) {
   return el ? (el.getAttribute('content') || '').trim() : '';
 }
 
-async function igDoc(url) {
+async function igDoc(url, ms = 8000) {
+  const ctl = new AbortController();
+  const timer = setTimeout(() => ctl.abort(), ms);
   try {
-    const res = await fetch(url, { credentials: 'include' });
+    const res = await fetch(url, { credentials: 'include', signal: ctl.signal });
     if (!res.ok) return null;
     return new DOMParser().parseFromString(await res.text(), 'text/html');
-  } catch (e) { return null; }
+  } catch (e) { return null; } finally { clearTimeout(timer); }
 }
 
 // Reads a reel / post link and its creator. Returns null if the link isn't an Instagram reel or post.
@@ -118,7 +120,8 @@ async function igLookupContent(link) {
 
   const doc = await igDoc(contentUrl);
   const desc = igMeta(doc, 'og:description');
-  const content = { kind, url: contentUrl, thumbUrl: igMeta(doc, 'og:image'), caption: '', likes: 0, comments: 0, views: 0, postedAt: '' };
+  // If Instagram didn't send a cover image, its public media link often still works
+  const content = { kind, url: contentUrl, thumbUrl: igMeta(doc, 'og:image') || `https://www.instagram.com/p/${code}/media/?size=l`, caption: '', likes: 0, comments: 0, views: 0, postedAt: '' };
   let username = ci > 0 ? parts[0] : '';
   const m = desc.match(/^([\d.,]+\s*[KMBkmb]?)\s+likes?,\s*([\d.,]+\s*[KMBkmb]?)\s+comments?\s*-\s*([\w.]+)\s+on\s+([^:]+?):\s*([\s\S]*)$/i);
   if (m) {

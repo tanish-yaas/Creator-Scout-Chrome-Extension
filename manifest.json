@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Creator Scout",
-  "version": "4.1.1",
+  "version": "4.2",
   "description": "Scout Instagram and YouTube creators and reels, keep them in the extension, copy to Sheets, and moodboard them by brand.",
   "action": {
     "default_popup": "popup.html",

@@ -32,6 +32,12 @@ function setDot(state) {
   statusDot.className = 'brand-dot' + (state ? ' dot-' + state : '');
 }
 function fail(text) {
+  if (!current) {
+    const box = $('preview-empty');
+    box.classList.remove('hidden');
+    box.innerHTML = `<p class="pixel">Couldn't fetch this page</p><p></p>`;
+    box.lastElementChild.textContent = text;
+  }
   showStatus(text, 'error-text');
   setDot('');
 }
@@ -268,14 +274,25 @@ async function handleYouTubeFetch(tab) {
 
 async function handleInstagramFetch(tab) {
   if (!tab.url.includes('instagram.com')) return fail('Open an Instagram profile, reel or post first.');
+  if (/instagram\.com\/?(\?|#|$)/.test(tab.url) || /instagram\.com\/(explore|direct|accounts)\b/.test(tab.url)) {
+    return fail('Open a creator\'s profile, a reel or a post. The home feed, Explore and DMs don\'t point to one creator.');
+  }
   let res;
   try {
-    const [inj] = await chrome.scripting.executeScript({ target: { tabId: tab.id }, func: scoutScrapeInstagram });
+    const run = chrome.scripting.executeScript({ target: { tabId: tab.id }, func: scoutScrapeInstagram });
+    const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 20000));
+    const [inj] = await Promise.race([run, timeout]);
     res = inj && inj.result;
   } catch (e) {
-    return fail('Couldn\'t read the page. Refresh Instagram and try again.');
+    const msg = String(e && e.message || e);
+    if (msg === 'timeout') return fail('Instagram took too long to answer. Refresh the Instagram tab and try again.');
+    if (/permission|Cannot access|host/i.test(msg)) {
+      return fail('Chrome is blocking Creator Scout on Instagram. Right-click the extension icon, choose "This can read and change site data", pick "On all sites", then refresh Instagram.');
+    }
+    if (/Frame|tab was closed|No tab/i.test(msg)) return fail('The Instagram tab changed while reading it. Try again.');
+    return fail('Couldn\'t read the page (' + msg + '). Refresh Instagram and try again.');
   }
-  if (!res || !res.creator || !res.creator.username) return fail('Couldn\'t find a creator on this page.');
+  if (!res || !res.creator || !res.creator.username) return fail('Couldn\'t find a creator on this page. Open their profile, a reel or a post.');
 
   let followers = parseCount(res.creator.followers);
   let category = res.creator.category || '--';
@@ -352,9 +369,26 @@ function updateUI({ creator, content }) {
   $('moodboard-fields').classList.remove('hidden');
 }
 
+let fetching = false;
 fetchBtn.addEventListener('click', async () => {
-  showStatus('Scanning...');
+  if (fetching) return;
+  fetching = true;
+  fetchBtn.disabled = true;
+  fetchBtn.textContent = 'Fetching…';
+  try { await doFetch(); } finally {
+    fetching = false;
+    fetchBtn.disabled = false;
+    fetchBtn.textContent = 'Fetch page';
+  }
+});
+
+async function doFetch() {
+  showStatus('Reading this page…');
   setDot('yellow');
+  if (!current) {
+    $('preview-empty').classList.remove('hidden');
+    $('preview-empty').innerHTML = '<p class="pixel">Reading this page…</p><p>Getting the reel, the creator and their stats.</p>';
+  }
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   if (!tab || !tab.url) return fail('No open tab to read.');
 
@@ -378,9 +412,9 @@ fetchBtn.addEventListener('click', async () => {
       });
     }
   } catch (e) {
-    fail('Fetch failed. Check your connection and try again.');
+    fail('Fetch failed (' + (e && e.message || 'unknown error') + '). Check your connection and try again.');
   }
-});
+}
 
 // ---------- save ----------
 

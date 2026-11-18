@@ -575,3 +575,35 @@ body.fit .title-row .ghost-btn { padding: 6px 12px; }
 @media (max-width: 760px) {
   .in-brand .back { position: static; margin-bottom: 6px; }
 }
+
+/* ---------- delete controls ---------- */
+
+.card-del {
+  position: absolute; right: 10px; bottom: 12px; z-index: 3;
+  width: 28px; height: 28px; border-radius: 50%;
+  background: rgba(0, 0, 0, 0.6); border: 1px solid rgba(255, 255, 255, 0.25); color: #fff;
+  font-size: 16px; line-height: 1; display: grid; place-items: center;
+  opacity: 0; transition: opacity 0.2s ease; backdrop-filter: blur(6px);
+}
+.ring .card.active:hover .card-del, .grid .card:hover .card-del, .card-del:focus-visible { opacity: 1; }
+.card-del:hover { background: #d93a3a; border-color: #ff6b6b; }
+
+.danger-zone {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  margin-top: 20px; padding: 14px 16px; border: 1px solid rgba(255, 90, 90, 0.35); border-radius: 14px;
+}
+.dz-title { margin: 0; font-size: 13.5px; font-weight: 500; color: #ff8a8a; }
+.dz-text { margin: 4px 0 0; font-size: 12px; color: var(--dim); }
+.danger-btn {
+  background: transparent; border: 1px solid rgba(255, 90, 90, 0.6); color: #ff8a8a; border-radius: 999px;
+  padding: 9px 18px; font-size: 13px; font-weight: 500; white-space: nowrap;
+}
+.danger-btn:hover:not(:disabled) { background: #d93a3a; border-color: #d93a3a; color: #fff; }
+.danger-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+#confirm { z-index: 500; }
+.confirm-box { width: min(460px, 100%); }
+.cf-text p { margin: 0 0 10px; color: var(--dim); font-size: 13.5px; line-height: 1.55; }
+.cf-text b { color: var(--text); font-weight: 500; }
+#cf-type-wrap { margin-top: 8px; }
+#cf-type-wrap b { color: var(--text); font-weight: 500; }

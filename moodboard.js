@@ -394,6 +394,7 @@ function cardHTML(item, i) {
     ${fest ? `<span class="fest">${fest}</span>` : ''}
     <span class="plat">${r.platform === 'YouTube' ? 'YT' : 'IG'}</span>
     <span class="play" aria-hidden="true">▶</span>
+    <button class="card-del" data-del="${r.id}" title="Delete this reel" aria-label="Delete this reel">×</button>
     <div class="cap">
       <h2>${esc(handleOf(r) || (r.platform === 'YouTube' ? 'YouTube video' : 'Instagram reel'))}</h2>
       <p>${[stat, r.niche].filter(Boolean).map(esc).join(', ')}</p>
@@ -514,6 +515,8 @@ function buildGrid() {
   applyGlows($('grid'));
 }
 $('grid').addEventListener('click', e => {
+  const del = e.target.closest('.card-del');
+  if (del) { deleteReel(del.dataset.del); return; }
   const c = e.target.closest('.card');
   if (c) openPlayer(+c.dataset.i);
 });
@@ -547,8 +550,12 @@ function endDrag(e, cancelled) {
   else activate(S.items[i]);
 }
 
+stage.addEventListener('click', e => {
+  const del = e.target.closest('.card-del');
+  if (del) { e.stopPropagation(); deleteReel(del.dataset.del); }
+});
 stage.addEventListener('pointerdown', e => {
-  if (e.button !== 0 || e.target.closest('.arrow')) return;
+  if (e.button !== 0 || e.target.closest('.arrow') || e.target.closest('.card-del')) return;
   drag = { x: e.clientX, y: e.clientY, start: pos, moved: false, id: e.pointerId };
 });
 window.addEventListener('pointermove', e => {
@@ -593,6 +600,7 @@ $('prev').addEventListener('click', () => go(Math.round(pos) - 1));
 $('next').addEventListener('click', () => go(Math.round(pos) + 1));
 
 document.addEventListener('keydown', e => {
+  if (!$('confirm').classList.contains('hidden')) { if (e.key === 'Escape') closeConfirm(false); return; }
   if (!$('player').classList.contains('hidden')) {
     if (e.key === 'Escape') closePlayer();
     if (e.key === 'ArrowRight') stepPlayer(1);
@@ -870,7 +878,7 @@ function renderPlayerSide() {
       <a href="${esc(r.contentUrl)}" target="_blank" rel="noopener">Open on ${esc(r.platform || 'Instagram')} ↗</a>
       ${r.url ? `<a href="${esc(r.url)}" target="_blank" rel="noopener">Creator profile ↗</a>` : ''}
     </div>
-    <button class="remove" id="e-remove">Remove from board</button>
+    <button class="remove" id="e-remove">Delete this reel</button>
     <p class="pl-count">${i + 1} / ${S.items.length}</p>`;
 
   const save = async (key, v) => {
@@ -891,12 +899,7 @@ function renderPlayerSide() {
     catch (err) { toast('Couldn\'t save: ' + err.message); load(); }
   }));
   if ($('e-more')) $('e-more').addEventListener('click', () => { S.chipsOpen = !S.chipsOpen; renderPlayerSide(); });
-  const rm = $('e-remove');
-  rm.addEventListener('click', async () => {
-    if (rm.dataset.confirm !== '1') { rm.dataset.confirm = '1'; rm.textContent = 'Click again to remove for everyone'; return; }
-    try { await deleteRecord(r.id); toast('Removed from board'); closePlayer(); }
-    catch (err) { toast('Couldn\'t remove: ' + err.message); }
-  });
+  $('e-remove').addEventListener('click', () => deleteReel(r.id));
 }
 
 function closePlayer() {
@@ -928,6 +931,7 @@ function openBrandModal(name) {
   $('bm-save').textContent = name ? 'Save card' : 'Create brand';
   $('bm-name').value = bm.name;
   $('bm-error').textContent = '';
+  $('bm-danger').classList.toggle('hidden', !name);
   renderSwatches();
   renderBrandPreview();
   $('brand-modal').classList.remove('hidden');
@@ -1031,6 +1035,146 @@ $('bm-form').addEventListener('submit', async e => {
 $('new-brand').addEventListener('click', () => openBrandModal(''));
 $('edit-card').addEventListener('click', () => { if (S.brand && S.brand !== UNFILED) openBrandModal(S.brand); });
 
+// ---------- confirm dialog ----------
+
+let confirmResolve = null;
+// Simple "Are you sure?" or, with typeText, the GitHub-style "type the name to confirm"
+function confirmDialog({ title, html, okLabel = 'Delete', typeText = '' }) {
+  $('cf-title').textContent = title;
+  $('cf-text').innerHTML = html;
+  $('cf-ok').textContent = okLabel;
+  $('cf-type-wrap').classList.toggle('hidden', !typeText);
+  $('cf-type').value = '';
+  $('cf-type-label').innerHTML = typeText ? `Type <b>${esc(typeText)}</b> to confirm.` : '';
+  $('cf-ok').disabled = !!typeText;
+  $('cf-ok').dataset.need = typeText;
+  $('confirm').classList.remove('hidden');
+  document.body.classList.add('modal-open');
+  setTimeout(() => (typeText ? $('cf-type') : $('cf-cancel')).focus(), 30);
+  return new Promise(res => { confirmResolve = res; });
+}
+function closeConfirm(answer) {
+  $('confirm').classList.add('hidden');
+  if (!$('player').classList.contains('hidden') || !$('brand-modal').classList.contains('hidden')) { /* another dialog is still open */ }
+  else document.body.classList.remove('modal-open');
+  if (confirmResolve) { confirmResolve(answer); confirmResolve = null; }
+}
+$('cf-type').addEventListener('input', e => { $('cf-ok').disabled = e.target.value !== $('cf-ok').dataset.need; });
+$('cf-form').addEventListener('submit', e => { e.preventDefault(); if (!$('cf-ok').disabled) closeConfirm(true); });
+$('cf-cancel').addEventListener('click', () => closeConfirm(false));
+$('confirm').addEventListener('click', e => { if (e.target === $('confirm')) closeConfirm(false); });
+
+// ---------- deleting ----------
+
+async function deleteReel(id) {
+  const r = S.records.find(x => x.id === id);
+  if (!r) return;
+  const ok = await confirmDialog({
+    title: 'Delete this reel?',
+    html: `<p>${esc(handleOf(r) || 'This reel')}'s reel is removed from ${esc(brandLabel(brandOf(r)))} on the board for everyone.</p>`,
+    okLabel: 'Delete reel'
+  });
+  if (!ok) return;
+  try {
+    await deleteRecord(id);
+    if (S.playerId === id) closePlayer();
+    toast('Reel deleted');
+  } catch (err) { toast('Couldn\'t delete: ' + err.message); }
+}
+
+async function deleteBrand(name) {
+  const recs = S.records.filter(r => r.brand === name);
+  const reels = recs.filter(isContent).length;
+  const creators = creatorsOf(recs).length;
+  const ok = await confirmDialog({
+    title: `Delete ${name}?`,
+    html: `<p>This permanently deletes the <b>${esc(name)}</b> card and everything filed under it for the whole team: ${reels} ${reels === 1 ? 'reel' : 'reels'} and ${creators} ${creators === 1 ? 'creator' : 'creators'}.</p>
+      <p>It can't be undone. Copies already sent to the master database stay there.</p>`,
+    okLabel: 'Delete this brand',
+    typeText: name
+  });
+  if (!ok) return;
+  try {
+    await deleteBrandEverywhere(name);
+    closeBrandModal();
+    if (S.brand === name) goHome();
+    toast(`${name} deleted`);
+  } catch (err) { toast('Couldn\'t delete: ' + err.message); }
+}
+$('bm-delete').addEventListener('click', () => { if (bm && bm.original) deleteBrand(bm.original); });
+
+// ---------- sample board (for testing) ----------
+
+const SAMPLE_BY = 'Sample board';
+const SAMPLE_BOARD = [
+  { brand: 'Nykaa', niche: 'Skincare reviews', festive: [], links: ['https://www.instagram.com/reel/DDceg7iTGTa/'] },
+  { brand: 'Zomato', niche: 'Delivery stories', festive: [], links: ['https://www.instagram.com/reel/C5qTdnMy7Zl/'] },
+  { brand: 'Swiggy', niche: 'Mumbai street food', festive: ['Diwali'], links: [
+    'https://www.instagram.com/reel/CcP-ujQjD3V/', 'https://www.instagram.com/reel/CbcXfUsPpVd/', 'https://www.instagram.com/reel/CbhFWwGOqqk/'] },
+  { brand: 'Kofuku', niche: 'Restaurant reviews', festive: [], links: [
+    'https://www.instagram.com/reel/Cbr9eFblneC/', 'https://www.instagram.com/reel/CbxIkHGqFPx/', 'https://www.instagram.com/reel/Cbz25Hml2z5/', 'https://www.instagram.com/p/CcK2GEXDR1T/'] }
+];
+const hasSamples = () => S.records.some(r => r.savedBy === SAMPLE_BY);
+
+function renderSampleBtn() {
+  $('sample-btn').textContent = hasSamples() ? 'Remove sample board' : 'Load sample board';
+}
+
+let sampleBusy = false;
+$('sample-btn').addEventListener('click', async () => {
+  if (sampleBusy) return;
+  sampleBusy = true;
+  $('sample-btn').disabled = true;
+  try { if (hasSamples()) await removeSampleBoard(); else await loadSampleBoard(); }
+  finally { sampleBusy = false; $('sample-btn').disabled = false; renderSampleBtn(); }
+});
+
+// Real public reels, looked up with your Instagram session so cards get real covers and creators
+async function loadSampleBoard() {
+  const total = SAMPLE_BOARD.reduce((n, b) => n + b.links.length, 0);
+  let done = 0;
+  for (const b of SAMPLE_BOARD) {
+    for (const link of b.links) {
+      toast(`Adding sample reels ${done + 1} of ${total}…`);
+      let found = null;
+      try { found = await lookupLink(link); } catch (e) { found = null; }
+      const creator = (found && found.creator) || {};
+      const content = (found && found.content) || { kind: link.includes('/p/') ? 'post' : 'reel', url: link };
+      const thumb = content.thumbUrl ? await thumbToDataUrl(content.thumbUrl) : '';
+      const avatar = creator.avatarUrl ? await thumbToDataUrl(creator.avatarUrl, 240) : '';
+      const thumbOk = thumb.startsWith('data:');
+      const followers = Number(creator.followers) || 0;
+      await upsertRecord({
+        platform: 'Instagram', username: creator.username || '', name: creator.name || '', followers,
+        category: '--', tier: calculateTier(followers).name, type: '', url: creator.url || '',
+        avgViews: '--', country: '--', contentUrl: content.url || link, contentKind: content.kind || 'reel',
+        thumb: thumbOk ? thumb : '', thumbUrl: thumbOk ? (content.thumbUrl || '') : '', avatar: avatar.startsWith('data:') ? avatar : '',
+        caption: content.caption || '', contentViews: 0, contentLikes: content.likes || 0, contentComments: content.comments || 0,
+        postedAt: content.postedAt || '', brand: b.brand, niche: b.niche, festive: b.festive, savedBy: SAMPLE_BY
+      });
+      done++;
+    }
+  }
+  await load();
+  const i = S.items.findIndex(it => it.name === 'Swiggy');
+  if (i !== -1) go(i);
+  toast(`Sample board added: ${total} reels across ${SAMPLE_BOARD.length} brands`);
+}
+
+async function removeSampleBoard() {
+  const samples = S.records.filter(r => r.savedBy === SAMPLE_BY);
+  toast('Removing the sample board…');
+  for (const r of samples) { try { await deleteRecord(r.id); } catch (e) { /* keep going */ } }
+  await load();
+  // Sample brands with nothing else in them go too
+  for (const b of SAMPLE_BOARD) {
+    if (!S.records.some(r => r.brand === b.brand)) { try { await deleteBrandEverywhere(b.brand); } catch (e) { /* ignore */ } }
+  }
+  if (SAMPLE_BOARD.some(b => b.brand === S.brand)) goHome();
+  await load();
+  toast('Sample board removed');
+}
+
 // ---------- copy links ----------
 
 $('copy-links').addEventListener('click', async () => {
@@ -1067,6 +1211,7 @@ function toast(msg) {
 // ---------- render ----------
 
 function render() {
+  renderSampleBtn();
   if (S.brand !== null && S.brand !== UNFILED && !brandNames().includes(S.brand)) S.brand = null;
   const creatorsTab = S.brand !== null && S.tab === 'creators';
   S.items = S.brand === null ? brandItems() : creatorsTab ? [] : reelItems();

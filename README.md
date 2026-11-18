@@ -1,4 +1,4 @@
-# Creator Scout v4.1 🕵️‍♂️
+# Creator Scout v4.2 🕵️‍♂️
 
 Creator Scout is a Chrome extension for scouting Instagram and YouTube creators and their content. Everything you save stays inside the extension. You copy it into any Google Sheet when you want, it still syncs to the master database, and it lands on a moodboard grouped by brand and niche.
 
@@ -14,6 +14,8 @@ Creator Scout is a Chrome extension for scouting Instagram and YouTube creators 
     * **Reels**: a carousel or grid of its reels, with niche and festive filters. Click a reel to play it embedded (Instagram or YouTube). The player panel shows the creator and stats, and that's where you change its brand, niche and festive tags or remove it. Use **+ Add reel links** to paste reference links; they're looked up and added with their creators.
     * **Creators**: everyone saved for that brand, with followers, tier, niches, reel count and who saved them. **Copy list for Sheets** copies the table.
   * Double-click a brand's title to rename it for everyone.
+  * **Deleting:** hover a reel and press × (or **Delete this reel** in the player) and confirm. To delete a whole brand, open **Edit card → Delete brand** and type the brand's name to confirm, like deleting a GitHub repo.
+  * **Sample board:** **Load sample board** fills the board with four brands and nine real public reels for testing. It looks them up with your Instagram login so the cards get real covers. **Remove sample board** takes them all out again.
 * **Creator list (the sheet):** **Open sheet** in the popup opens every saved row, with Google Sheets-style tools:
   * **Each column heading:** click it to sort; use its ▾ menu to sort A→Z or Z→A, filter by values (and by a min/max range for number columns), hide the column or move it. You can also drag headings to reorder them.
   * **Columns panel:** show, hide and reorder columns.

@@ -317,10 +317,10 @@ function mediaHTML(item) {
 // ---------- glow colour taken from each card's cover ----------
 
 const glowCache = new Map();
-try { Object.entries(JSON.parse(localStorage.getItem('scoutGlow') || '{}')).forEach(([k, v]) => glowCache.set(k, v)); } catch (e) { /* ignore */ }
+try { Object.entries(JSON.parse(localStorage.getItem('scoutGlow2') || '{}')).forEach(([k, v]) => glowCache.set(k, v)); } catch (e) { /* ignore */ }
 const glowKey = src => src.length > 200 ? src.slice(0, 80) + src.length + src.slice(-80) : src;
 function saveGlowCache() {
-  try { localStorage.setItem('scoutGlow', JSON.stringify(Object.fromEntries([...glowCache].slice(-400)))); } catch (e) { /* ignore */ }
+  try { localStorage.setItem('scoutGlow2', JSON.stringify(Object.fromEntries([...glowCache].slice(-400)))); } catch (e) { /* ignore */ }
 }
 function hexToRgb(hex) {
   const m = String(hex || '').match(/^#?([\da-f]{2})([\da-f]{2})([\da-f]{2})$/i);
@@ -334,7 +334,9 @@ async function coverColor(src) {
   if (glowCache.has(key)) return glowCache.get(key);
   let out = '';
   try {
-    const blob = await (await fetch(src)).blob();
+    const res = await fetch(src, { credentials: 'omit' });
+    if (!res.ok) throw new Error('image ' + res.status);
+    const blob = await res.blob();
     const bmp = await createImageBitmap(blob, { resizeWidth: 36, resizeHeight: 36, resizeQuality: 'low' });
     const c = new OffscreenCanvas(36, 36);
     const g = c.getContext('2d', { willReadFrequently: true });
@@ -366,8 +368,8 @@ async function coverColor(src) {
       out = avg.join(', ');
     }
   } catch (e) { out = ''; }
-  glowCache.set(key, out);
-  saveGlowCache();
+  // Only remember colours we actually read, so a failed load is retried next time
+  if (out) { glowCache.set(key, out); saveGlowCache(); }
   return out;
 }
 

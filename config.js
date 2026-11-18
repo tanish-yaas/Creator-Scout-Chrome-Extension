@@ -10,8 +10,8 @@ const YOUTUBE_API_KEY = "AIzaSyCtq8nF3PxPLS4dNBBX5JsUakBbK5Kyj-8";
 // Everyone who installs this build of the extension shares one board.
 // Leave TEAM_DB_URL empty to keep everything on this browser only.
 // ==========================================
-const TEAM_DB_URL = '';
-const TEAM_KEY = '';
+const TEAM_DB_URL = 'https://script.google.com/macros/s/AKfycbwlrwHfAkQTvK9stXXD3bxk5YxLueRR7iIZbWsrsllm28wrF3PTwFipZ6_VWP62YERj/exec';
+const TEAM_KEY = 'yaas-scout-NLV9kZdgyrcJlfStZZly7Ybl';
 // Set to true only if the web app is deployed with "Who has access: Anyone within <your company>".
 // Everyone then needs to be signed in to Chrome / Google with their company account.
 const TEAM_DOMAIN_ONLY = false;

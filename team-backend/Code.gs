@@ -10,7 +10,7 @@
  */
 
 // Must match TEAM_KEY in config.js of the extension. Change both to the same random text.
-const TEAM_KEY = 'change-me-to-a-long-random-phrase';
+const TEAM_KEY = 'yaas-scout-NLV9kZdgyrcJlfStZZly7Ybl';
 
 const IMAGE_FOLDER_NAME = 'Creator Scout images';
 

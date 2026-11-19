@@ -117,6 +117,8 @@ async function init() {
     $('update-text').textContent = `Creator Scout ${u.latest} is ready`;
     $('update-bar').classList.remove('hidden');
   });
+  $('version-btn').textContent = 'v' + chrome.runtime.getManifest().version;
+  $('version-btn').addEventListener('click', () => chrome.tabs.create({ url: chrome.runtime.getURL('update.html') }));
   $('update-bar').addEventListener('click', () => chrome.tabs.create({ url: chrome.runtime.getURL('update.html?go=1') }));
 
   // Refresh brands and counts from the team board in the background

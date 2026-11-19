@@ -1,4 +1,4 @@
-# Creator Scout v4.10 🕵️‍♂️
+# Creator Scout v4.11 🕵️‍♂️
 
 Creator Scout is a Chrome extension for scouting Instagram and YouTube creators and their content. Everything you save stays inside the extension. You copy it into any Google Sheet when you want, it still syncs to the master database, and it lands on a moodboard grouped by brand and niche.
 
@@ -9,7 +9,7 @@ Creator Scout is a Chrome extension for scouting Instagram and YouTube creators 
   * **Moodboard mode** (the switch at the top of the popup): the popup turns violet with a moving halo so it's obvious. Pick a brand, optionally a niche and campaign type (festivals like Diwali, seasons like Summer, sales, launches), and press **Add to moodboard**. The reel lands on that brand's moodboard for the whole team, and in your sheet.
   * Both modes still send every save to the Make.com master database.
 * **Fast saves:** Saving is instant. The thumbnail and profile picture are copied as soon as the page is fetched, and moodboard saves upload to the team board in the background, so you can close the popup straight away.
-* **Updates in one click:** When a newer version is on GitHub, the moodboard shows **Update to x**, the popup shows an update bar and the toolbar icon shows **NEW**. The first time, pick your Creator Scout folder and allow editing (choose **Allow on every visit** if Chrome offers it). After that, updates install by themselves whenever the moodboard or sheet opens, and Creator Scout restarts with all your data. You can turn automatic updates off on the update page.
+* **Updates in one click:** When a newer version is on GitHub, the moodboard shows **Update to x**, the popup shows an update bar and the toolbar icon shows **NEW**. The first time, pick your Creator Scout folder and allow editing (choose **Allow on every visit** if Chrome offers it). After that, updates install by themselves whenever the moodboard or sheet opens, and Creator Scout restarts with all your data. You can turn automatic updates off on the update page. To check by hand any time, use **··· → Check for updates** on the moodboard, or click the version number at the bottom of the popup.
 * **Brand (was IP):** Brand and IP are the same thing now. Old rows with an IP are moved to Brand automatically, and the Make.com payload still includes `ip` (a copy of brand) so the existing scenario keeps working.
 * **Shared team board:** With the team database connected (see `team-backend/SETUP.md`), everyone using the extension sees and adds to the same board and sheet, on any device. Saves made while offline upload automatically later.
 * **Moodboard dashboard:**

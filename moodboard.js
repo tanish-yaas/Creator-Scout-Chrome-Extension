@@ -1563,6 +1563,8 @@ async function updateCheck({ force = false, install = true } = {}) {
   if (u.available) b.textContent = `Update to ${u.latest}`;
 }
 $('update-btn').addEventListener('click', () => chrome.tabs.create({ url: chrome.runtime.getURL('update.html?go=1') }));
+$('check-updates').textContent = `Check for updates (you're on ${chrome.runtime.getManifest().version})`;
+$('check-updates').addEventListener('click', () => chrome.tabs.create({ url: chrome.runtime.getURL('update.html') }));
 if (!SHARE) {
   updateCheck({ force: true });
   setInterval(() => updateCheck({ install: document.hidden }), 15 * 60 * 1000);

@@ -77,7 +77,7 @@ async function runUpdate(forcePick = false) {
   }
 }
 
-$('update-btn').addEventListener('click', () => runUpdate(false));
+$('update-btn').addEventListener('click', () => (info && info.available ? runUpdate(false) : location.reload()));
 document.addEventListener('click', e => { if (e.target.id === 'change-folder') runUpdate(true); });
 
 $('auto-toggle').addEventListener('change', e => chromeSet({ scoutAutoUpdate: e.target.checked }));
@@ -113,7 +113,9 @@ async function init() {
   }
   if (!info.available) {
     $('title').textContent = 'You\'re up to date';
-    $('versions').textContent = `Creator Scout ${info.current} is the latest version.`;
+    $('versions').textContent = `Creator Scout ${info.current} is the latest version. New versions show up here a few minutes after they're pushed to GitHub.`;
+    $('actions').classList.remove('hidden');
+    $('update-btn').textContent = 'Check again';
     return;
   }
   $('title').textContent = `Update to ${info.latest}`;

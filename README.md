@@ -1,4 +1,4 @@
-# Creator Scout v4.7 🕵️‍♂️
+# Creator Scout v4.8 🕵️‍♂️
 
 Creator Scout is a Chrome extension for scouting Instagram and YouTube creators and their content. Everything you save stays inside the extension. You copy it into any Google Sheet when you want, it still syncs to the master database, and it lands on a moodboard grouped by brand and niche.
 
@@ -20,6 +20,7 @@ Creator Scout is a Chrome extension for scouting Instagram and YouTube creators 
     * **Reels**: a carousel or grid of its reels. The **Filters** menu next to Carousel / Grid filters by niche, campaign type and platform. Click a reel to play it embedded (Instagram or YouTube). The player panel shows the creator and stats, and that's where you change its brand, niche and campaign type or remove it. Use **+ Add reel links** to paste reference links; they're looked up and added with their creators.
     * **Creators**: everyone saved for that brand, with followers, tier, niches, reel count and who saved them. **Copy list for Sheets** copies the table.
   * Double-click a brand's title to rename it for everyone.
+  * **Share with client:** inside a brand, this button in the top bar creates a private link to that brand's moodboard. The client sees the reels and creators the way you do, read-only, with no other brands and no teammates' names, and it stays up to date. You can turn the link off or replace it at any time. Setup: `team-backend/SETUP.md`, "Client links".
   * **Deleting:** hover a reel and press × (or **Delete this reel** in the player) and confirm. To delete a whole brand, open **Edit card → Delete brand** and type the brand's name to confirm, like deleting a GitHub repo.
 * **Creator list (the sheet):** **Open sheet** in the popup opens every saved row, with Google Sheets-style tools:
   * **Each column heading:** click it to sort; use its ▾ menu to sort A→Z or Z→A, filter by values (and by a min/max range for number columns), hide the column or move it. You can also drag headings to reorder them.
@@ -54,6 +55,7 @@ Updates come from `UPDATE_REPO` / `UPDATE_BRANCH` in `config.js`. The update nev
 | `scraper.js` | Injected into Instagram to read profiles, reels and posts |
 | `config.js` | Master webhook, YouTube key, team database and update settings |
 | `updater.js / update.html / update.js / update.css` | Update checks and the one-click update page |
+| `share.js` | Lets `moodboard.html` run on the web as the read-only client view |
 | `background.js` | Uploads moodboard saves, marks the icon when an update is ready, reopens tabs after an update |
 | `db.js` | Storage, team sync, sheet export and number helpers |
 | `platforms.js` | Instagram and YouTube lookups shared by the popup and dashboard |

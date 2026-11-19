@@ -16,6 +16,7 @@
     </div>
     <div class="top-actions">
       <button id="update-btn" class="ghost-btn update-btn hidden" title="A new version of Creator Scout is ready">Update available</button>
+      <button id="share-btn" class="ghost-btn share-btn hidden">Share with client</button>
       <button id="new-brand" class="ghost-btn">New brand</button>
       <a class="ghost-btn" href="sheet.html">Open sheet</a>
       <div class="pop-anchor">
@@ -159,8 +160,32 @@
     </div>
   </div>
 
+  <!-- Client link for one brand -->
+  <div id="share-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="sh-title">
+    <div class="modal-box share-box">
+      <h2 id="sh-title" class="modal-title">Share with client</h2>
+      <p id="sh-text" class="cf-text"></p>
+      <div id="sh-link" class="share-link hidden">
+        <input id="sh-url" type="text" readonly aria-label="Client link">
+        <button type="button" id="sh-copy" class="glow-pill sh-copy">Copy link</button>
+      </div>
+      <p id="sh-error" class="modal-error"></p>
+      <div class="modal-actions share-actions">
+        <div class="sh-manage hidden" id="sh-manage">
+          <button type="button" id="sh-open" class="link-btn">Preview</button>
+          <button type="button" id="sh-new" class="link-btn">Make a new link</button>
+          <button type="button" id="sh-off" class="link-btn danger-link">Turn off link</button>
+        </div>
+        <button type="button" id="sh-close" class="ghost-btn">Done</button>
+        <button type="button" id="sh-create" class="glow-pill modal-save">Create link</button>
+      </div>
+    </div>
+  </div>
+
+  <p id="share-msg" class="share-msg" role="status" aria-live="polite"></p>
   <div id="toast" class="toast" role="status"></div>
 
+  <script src="share.js"></script>
   <script src="config.js"></script>
   <script src="updater.js"></script>
   <script src="db.js"></script>

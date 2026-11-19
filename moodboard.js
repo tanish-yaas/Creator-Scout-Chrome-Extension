@@ -25,6 +25,8 @@ const S = {
 };
 
 const UNFILED = '__unfiled';
+// Opened from a client link: read-only, one brand (see share.js)
+const SHARE = typeof globalThis.SCOUT_SHARE === 'string';
 const NO_NICHE = 'No niche yet';
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -180,7 +182,7 @@ function renderHero() {
     const reels = all.filter(isContent).length;
     const creators = creatorsOf(all).length;
     $('title').textContent = brandLabel(S.brand);
-    $('title').title = S.brand === UNFILED ? '' : 'Double-click to rename';
+    $('title').title = S.brand === UNFILED || SHARE ? '' : 'Double-click to rename';
     $('sub').textContent = S.brand === UNFILED
       ? `${all.length} saved without a brand. Give them a brand to file them.`
       : `${reels} ${reels === 1 ? 'reel' : 'reels'} and ${creators} ${creators === 1 ? 'creator' : 'creators'}.`;
@@ -673,6 +675,7 @@ $('next').addEventListener('click', () => step(1));
 
 document.addEventListener('keydown', e => {
   if (!$('confirm').classList.contains('hidden')) { if (e.key === 'Escape') closeConfirm(false); return; }
+  if (!$('share-modal').classList.contains('hidden')) return;
   if (!$('player').classList.contains('hidden')) {
     if (e.key === 'Escape') closePlayer();
     if (e.key === 'ArrowRight') stepPlayer(1);
@@ -722,6 +725,7 @@ function openBrand(name) {
 const brandRecordsFor = name => S.records.filter(r => brandOf(r) === name);
 
 function goHome() {
+  if (SHARE) return;
   S.brand = null;
   S.niches.clear();
   S.festive.clear();
@@ -740,7 +744,7 @@ $('home-link').addEventListener('click', e => { e.preventDefault(); goHome(); })
 
 // Double-click the brand title to rename it for everyone
 $('title').addEventListener('dblclick', () => {
-  if (S.brand === null || S.brand === UNFILED) return;
+  if (SHARE || S.brand === null || S.brand === UNFILED) return;
   const t = $('title');
   const old = S.brand;
   t.contentEditable = 'true';
@@ -780,7 +784,7 @@ function renderInfo() {
   }
   const r = item.rec;
   info.innerHTML = `
-    <button class="open-cta glow-pill" id="play-this" title="Play it and edit its brand, niche and campaign type">Play ${esc(handleOf(r) || 'reel')} <span aria-hidden="true">▶</span></button>`;
+    <button class="open-cta glow-pill" id="play-this" title="${SHARE ? 'Play this reel' : 'Play it and edit its brand, niche and campaign type'}">Play ${esc(handleOf(r) || 'reel')} <span aria-hidden="true">▶</span></button>`;
   $('play-this').addEventListener('click', () => openPlayer(S.index));
 }
 
@@ -803,10 +807,10 @@ function renderCreators() {
   $('creators').innerHTML = `
     <div class="creators-head">
       <p>${list.length} ${list.length === 1 ? 'creator' : 'creators'}</p>
-      <button id="copy-creators" class="ghost-btn">Copy list for Sheets</button>
+      ${SHARE ? '' : '<button id="copy-creators" class="ghost-btn">Copy list for Sheets</button>'}
     </div>
     <div class="ctable-wrap"><table class="ctable">
-      <thead><tr><th>Creator</th><th class="num">Followers</th><th>Tier</th><th>Category</th><th>Type</th><th>Niches</th><th class="num">Reels</th><th>Saved by</th><th></th></tr></thead>
+      <thead><tr><th>Creator</th><th class="num">Followers</th><th>Tier</th><th>Category</th><th>Type</th><th>Niches</th><th class="num">Reels</th>${SHARE ? '' : '<th>Saved by</th>'}<th></th></tr></thead>
       <tbody>${list.map(c => {
         const tier = calculateTier(c.followers);
         const ini = String(c.username).replace(/^@/, '').charAt(0).toUpperCase();
@@ -821,13 +825,13 @@ function renderCreators() {
           <td>${esc(c.type || '--')}</td>
           <td>${esc([...c.niches].join(', ') || '--')}</td>
           <td class="num">${c.reels}</td>
-          <td>${esc([...c.savedBy].join(', ') || '--')}</td>
+          ${SHARE ? '' : `<td>${esc([...c.savedBy].join(', ') || '--')}</td>`}
           <td>${c.url ? `<a href="${esc(c.url)}" target="_blank" rel="noopener">Profile ↗</a>` : ''}</td>
         </tr>`;
       }).join('')}</tbody>
     </table></div>`;
   $('creators').querySelectorAll('.ava img').forEach(img => img.addEventListener('error', () => img.remove(), { once: true }));
-  $('copy-creators').addEventListener('click', async () => {
+  if ($('copy-creators')) $('copy-creators').addEventListener('click', async () => {
     const head = ['Username', 'Name', 'Platform', 'Followers', 'Tier', 'Category', 'Type', 'Niches', 'Reels saved', 'Saved by', 'URL'];
     const rows = list.map(c => [c.username, c.name, c.platform, c.followers || '', calculateTier(c.followers).name, c.category, c.type, [...c.niches].join(', '), c.reels, [...c.savedBy].join(', '), c.url]);
     const text = [head, ...rows].map(r => r.map(v => String(v ?? '').replace(/[\t\n]/g, ' ')).join('\t')).join('\n');
@@ -926,6 +930,7 @@ function renderPlayerSide() {
   const r = S.records.find(x => x.id === S.playerId);
   if (!r) { closePlayer(); return; }
   const tier = calculateTier(r.followers);
+  if (SHARE) { renderPlayerSideReadOnly(r, i, tier); return; }
   const brands = brandNames().filter(b => b !== UNFILED);
   const niches = r.brand ? (S.taxonomy.brands[r.brand] || []) : [];
   $('player-side').innerHTML = `
@@ -978,6 +983,31 @@ function renderPlayerSide() {
   }));
   if ($('e-more')) $('e-more').addEventListener('click', () => { S.chipsOpen = !S.chipsOpen; renderPlayerSide(); });
   $('e-remove').addEventListener('click', () => deleteReel(r.id));
+}
+
+// Client view of the side panel: the same details, nothing to edit
+function renderPlayerSideReadOnly(r, i, tier) {
+  const tags = (r.festive || []).map(festiveMeta);
+  $('player-side').innerHTML = `
+    <p class="pl-handle">${esc(handleOf(r) || 'Unknown creator')}</p>
+    <p class="pl-name">${esc(r.name && r.name !== r.username ? r.name : '')}</p>
+    <div class="pl-stats">
+      ${r.followers ? `<div><span>${r.platform === 'YouTube' ? 'Subscribers' : 'Followers'}</span><b>${formatCount(r.followers)}</b></div>` : ''}
+      ${tier.class ? `<div><span>Tier</span><b class="tier ${tier.class}">${tier.name}</b></div>` : ''}
+      ${r.contentViews ? `<div><span>Views</span><b>${formatCount(r.contentViews)}</b></div>` : ''}
+      ${r.contentLikes ? `<div><span>Likes</span><b>${formatCount(r.contentLikes)}</b></div>` : ''}
+    </div>
+    ${r.caption ? `<p class="pl-caption">${esc(r.caption)}</p>` : ''}
+    ${r.niche || tags.length ? `<p class="pl-label">Filed under</p>
+    <div class="chips">
+      ${r.niche ? `<span class="chip on static">${esc(r.niche)}</span>` : ''}
+      ${tags.map(f => `<span class="chip on static" style="--c:${f.color}">${f.emoji} ${esc(f.name)}</span>`).join('')}
+    </div>` : ''}
+    <div class="pl-links">
+      <a href="${esc(r.contentUrl)}" target="_blank" rel="noopener">Open on ${esc(r.platform || 'Instagram')} ↗</a>
+      ${r.url ? `<a href="${esc(r.url)}" target="_blank" rel="noopener">Creator profile ↗</a>` : ''}
+    </div>
+    <p class="pl-count">${i + 1} / ${S.items.length}</p>`;
 }
 
 function closePlayer() {
@@ -1356,6 +1386,7 @@ function toast(msg) {
 // ---------- render ----------
 
 function render() {
+  $('share-btn').classList.toggle('hidden', SHARE || !teamOn() || S.brand === null || S.brand === UNFILED);
   if (S.brand !== null && S.brand !== UNFILED && !brandNames().includes(S.brand)) S.brand = null;
   const creatorsTab = S.brand !== null && S.tab === 'creators';
   S.items = S.brand === null ? brandItems() : creatorsTab ? [] : reelItems();
@@ -1386,7 +1417,110 @@ function render() {
 }
 
 load();
-startTeamSync();
+if (SHARE) startShareView();
+else startTeamSync();
+
+// ---------- client link: what the client sees ----------
+
+async function loadShared(first) {
+  const msg = $('share-msg');
+  if (!SCOUT_SHARE) { msg.textContent = 'This link isn\'t complete. Check you copied all of it.'; return; }
+  try {
+    const res = await fetch(`${TEAM_DB_URL}?action=shared&t=${encodeURIComponent(SCOUT_SHARE)}&_=${Date.now()}`, { credentials: 'omit' });
+    const d = await res.json();
+    if (!d.ok) throw new Error(d.error || 'This moodboard couldn\'t be loaded.');
+    const b = d.brand;
+    await setTaxonomy({
+      brands: { [b.name]: b.niches || [] },
+      meta: { [b.name]: { logo: b.logo || '', color: b.color || '' } },
+      festive: withDefaultTypes(d.festive && d.festive.length ? d.festive : DEFAULT_FESTIVE.slice()),
+      shares: {}
+    });
+    await setRecords((d.records || []).map(r => ({ ...normalizeRecord(r), synced: true })));
+    document.title = `${b.name} · Moodboard`;
+    if (first) {
+      await load();
+      openBrand(b.name);
+      document.body.classList.add('share-ready');
+      msg.textContent = '';
+    }
+  } catch (e) {
+    if (first) msg.textContent = e.message && !/Failed to fetch|JSON/.test(e.message) ? e.message : 'This moodboard couldn\'t be loaded. Check your connection and refresh.';
+  }
+}
+
+function startShareView() {
+  $('share-msg').textContent = 'Loading the moodboard…';
+  $('home-link').removeAttribute('href');
+  loadShared(true);
+  // Stays live: new reels the team adds show up without a refresh
+  setInterval(() => { if (!document.hidden) loadShared(false); }, 60000);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) loadShared(false); });
+}
+
+// ---------- client link: creating it (team side) ----------
+
+async function renderShareModal() {
+  const name = S.brand;
+  const token = (S.taxonomy.shares || {})[name];
+  const url = shareUrl(token);
+  $('sh-title').textContent = `Share ${brandLabel(name)} with a client`;
+  $('sh-text').textContent = token
+    ? `Anyone with this link sees the ${brandLabel(name)} moodboard, its reels and creators, the way you see it here. It updates as the team adds reels. They can't edit anything or see other brands.`
+    : `Create a private link to the ${brandLabel(name)} moodboard. Whoever you send it to sees this brand's reels and creators, the way you see them here, and nothing else. They can't edit anything.`;
+  $('sh-link').classList.toggle('hidden', !token);
+  $('sh-manage').classList.toggle('hidden', !token);
+  $('sh-create').classList.toggle('hidden', !!token);
+  $('sh-url').value = url;
+  $('sh-error').textContent = '';
+}
+
+function openShareModal() {
+  if (S.brand === null || S.brand === UNFILED) return;
+  renderShareModal();
+  $('share-modal').classList.remove('hidden');
+  document.body.classList.add('modal-open');
+  setTimeout(() => ($('sh-create').classList.contains('hidden') ? $('sh-copy') : $('sh-create')).focus(), 30);
+}
+function closeShareModal() {
+  $('share-modal').classList.add('hidden');
+  document.body.classList.remove('modal-open');
+}
+
+async function shareAction(btn, fn) {
+  const label = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = 'Working…';
+  try { await fn(); S.taxonomy = await getTaxonomy(); renderShareModal(); }
+  catch (err) { $('sh-error').textContent = err.message || String(err); }
+  finally { btn.disabled = false; btn.textContent = label; }
+}
+
+$('share-btn').addEventListener('click', openShareModal);
+$('sh-close').addEventListener('click', closeShareModal);
+$('share-modal').addEventListener('click', e => { if (e.target === $('share-modal')) closeShareModal(); });
+$('sh-create').addEventListener('click', () => shareAction($('sh-create'), async () => {
+  const token = await shareBrand(S.brand);
+  if (await copyToClipboard(shareUrl(token))) toast('Link created and copied');
+}));
+$('sh-copy').addEventListener('click', async () => {
+  $('sh-url').select();
+  toast(await copyToClipboard($('sh-url').value) ? 'Link copied' : 'Copy was blocked. Select the link and copy it.');
+});
+$('sh-open').addEventListener('click', () => window.open($('sh-url').value, '_blank', 'noopener'));
+$('sh-new').addEventListener('click', async () => {
+  closeShareModal();
+  const ok = await confirmDialog({ title: 'Make a new link?', html: `<p>The current link for ${esc(brandLabel(S.brand))} stops working. Anyone you sent it to will need the new one.</p>`, okLabel: 'Make new link' });
+  openShareModal();
+  if (ok) shareAction($('sh-new'), async () => { const token = await shareBrand(S.brand, true); if (await copyToClipboard(shareUrl(token))) toast('New link created and copied'); });
+});
+$('sh-off').addEventListener('click', async () => {
+  closeShareModal();
+  const ok = await confirmDialog({ title: 'Turn off this link?', html: `<p>Anyone with the link to ${esc(brandLabel(S.brand))} won't be able to open it any more. You can create a new link later.</p>`, okLabel: 'Turn off' });
+  openShareModal();
+  if (ok) shareAction($('sh-off'), async () => { await unshareBrand(S.brand); toast('Link turned off'); });
+});
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('share-modal').classList.contains('hidden')) closeShareModal(); });
 
 // ---------- updates ----------
 // Installs by itself when the folder is already allowed (on open, or later while the tab is in the background);
@@ -1401,7 +1535,9 @@ async function updateCheck({ force = false, install = true } = {}) {
   if (u.available) b.textContent = `Update to ${u.latest}`;
 }
 $('update-btn').addEventListener('click', () => chrome.tabs.create({ url: chrome.runtime.getURL('update.html?go=1') }));
-updateCheck({ force: true });
-setInterval(() => updateCheck({ install: document.hidden }), 15 * 60 * 1000);
-document.addEventListener('visibilitychange', () => { if (!document.hidden) updateCheck({ install: false }); });
-takeJustUpdated().then(u => { if (u) setTimeout(() => toast(`Creator Scout updated to ${u.to}`), 600); });
+if (!SHARE) {
+  updateCheck({ force: true });
+  setInterval(() => updateCheck({ install: document.hidden }), 15 * 60 * 1000);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) updateCheck({ install: false }); });
+}
+if (!SHARE) takeJustUpdated().then(u => { if (u) setTimeout(() => toast(`Creator Scout updated to ${u.to}`), 600); });

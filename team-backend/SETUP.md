@@ -48,6 +48,13 @@ Send the extension folder (with your `config.js`) to the team. Each person insta
 ## Updating the script later
 Paste the new code, then go to **Deploy → Manage deployments → Edit (pencil) → Version: New version → Deploy**. The URL stays the same, so nobody has to change anything.
 
+## Client links (share one brand's moodboard)
+Open a brand on the moodboard and press **Share with client** in the top bar, then **Create link**. Whoever opens the link sees that brand's moodboard (reels and creators) exactly as the team does, read-only. They see no other brands and no teammates' names, and it updates as you add reels. **Turn off link** stops it working; **Make a new link** replaces it.
+
+This needs two things set up once:
+1. **The latest script.** Paste the newest `Code.gs` and redeploy as a new version (see "Updating the script later" below).
+2. **GitHub Pages**, which hosts the page clients open. On GitHub, open the repo's **Settings → Pages**. Under **Build and deployment**, set **Source: Deploy from a branch**, **Branch: main**, folder **/ (root)**, and click **Save**. After a minute or two the page is live at `https://tanish-yaas.github.io/Creator-Scout-Chrome-Extension/moodboard.html`, which is `SHARE_PAGE_URL` in `config.js`.
+
 ## Good to know
 - The **Make.com master database still gets every save**, exactly as before.
 - Images go to a Drive folder called "Creator Scout images", shared by link so the team can see them. If your Workspace blocks link sharing, small thumbnails are stored in the sheet instead.

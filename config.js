@@ -19,3 +19,6 @@ const TEAM_DOMAIN_ONLY = false;
 // Where updates come from: the extension checks this GitHub repo for a newer manifest version
 const UPDATE_REPO = 'tanish-yaas/Creator-Scout-Chrome-Extension';
 const UPDATE_BRANCH = 'main';
+
+// Client links: the web address of the moodboard page (GitHub Pages for this repo). A brand's link is this + #share=…
+const SHARE_PAGE_URL = 'https://tanish-yaas.github.io/Creator-Scout-Chrome-Extension/moodboard.html';

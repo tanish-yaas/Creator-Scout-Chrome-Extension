@@ -6,7 +6,7 @@
  * The sheet gets three tabs:
  *   Records  — every creator / reel the team saves (readable as a normal sheet)
  *   Brands   — logo and card colour for each brand on the moodboard, plus its niches
- *   Settings — shared campaign types
+ *   Settings — shared campaign types and client share links
  */
 
 // Must match TEAM_KEY in config.js of the extension. Change both to the same random text.
@@ -52,6 +52,11 @@ const NUMBER_FIELDS = ['followers', 'avgViews', 'contentViews', 'contentLikes', 
 
 function doGet(e) {
   const p = (e && e.parameter) || {};
+  // Client links: no team key, only the one brand the link was made for
+  if (p.action === 'shared') {
+    try { return json_(Object.assign({ ok: true }, sharedBrand_(p.t))); }
+    catch (err) { return json_({ ok: false, error: String(err && err.message || err) }); }
+  }
   if (p.key !== TEAM_KEY) return json_({ ok: false, error: 'Wrong team key' });
   try {
     if (p.action === 'list') return json_(Object.assign({ ok: true }, listAll_()));
@@ -78,6 +83,8 @@ function doPost(e) {
       case 'renameBrand': renameBrand_(body.from, body.to); return json_({ ok: true });
       case 'deleteBrand': return json_({ ok: true, deleted: deleteBrand_(body.name) });
       case 'festive': return json_({ ok: true, festive: saveFestive_(body.festive || []) });
+      case 'share': return json_({ ok: true, token: shareBrand_(body.name, !!body.reset) });
+      case 'unshare': unshareBrand_(body.name); return json_({ ok: true });
       default: return json_({ ok: false, error: 'Unknown action' });
     }
   } catch (err) {
@@ -163,6 +170,7 @@ function listAll_() {
     records: records,
     brands: brands,
     festive: getFestive_(),
+    shares: getShares_(),
     sheetUrl: SpreadsheetApp.getActiveSpreadsheet().getUrl(),
     serverTime: Date.now()
   };
@@ -290,6 +298,11 @@ function renameBrand_(from, to) {
     old.updatedAt = Date.now();
     bs.getRange(old._row, 1, 1, BRAND_COLUMNS.length).setValues([toRow_(old, BRAND_COLUMNS)]);
   }
+  // The client link keeps working under the new name
+  const shares = getShares_();
+  if (shares[from] && !shares[to]) { shares[to] = shares[from]; }
+  delete shares[from];
+  setSetting_('shares', JSON.stringify(shares));
 }
 
 // Deletes a brand and everything filed under it (the Make.com master database is separate and untouched)
@@ -302,6 +315,7 @@ function deleteBrand_(name) {
   const bs = sheet_('Brands', BRAND_COLUMNS);
   const b = readObjects_(bs, BRAND_COLUMNS).filter(function (r) { return String(r.name) === String(name); })[0];
   if (b) bs.deleteRow(b._row);
+  unshareBrand_(name);
   return rows.length;
 }
 
@@ -322,6 +336,61 @@ function saveFestive_(list) {
   if (row) sh.getRange(row._row, 2, 1, 1).setValues([[value]]);
   else sh.appendRow(['festive', value]);
   return list;
+}
+
+// ---------------------------------------------------------------- client share links
+// One secret link per brand. Settings row "shares" holds { "Brand": "token" }.
+
+function getSetting_(key) {
+  const cols = [['key', 'Key'], ['value', 'Value']];
+  const row = readObjects_(sheet_('Settings', cols), cols).filter(function (r) { return r.key === key; })[0];
+  return row ? String(row.value || '') : '';
+}
+
+function setSetting_(key, value) {
+  const cols = [['key', 'Key'], ['value', 'Value']];
+  const sh = sheet_('Settings', cols);
+  const row = readObjects_(sh, cols).filter(function (r) { return r.key === key; })[0];
+  if (row) sh.getRange(row._row, 2, 1, 1).setValues([[value]]);
+  else sh.appendRow([key, value]);
+}
+
+function getShares_() {
+  try { return JSON.parse(getSetting_('shares') || '{}') || {}; } catch (e) { return {}; }
+}
+
+function shareBrand_(name, reset) {
+  if (!name) throw new Error('Brand name is missing');
+  const shares = getShares_();
+  if (!shares[name] || reset) {
+    shares[name] = Utilities.getUuid().replace(/-/g, '') + Utilities.getUuid().replace(/-/g, '').slice(0, 8);
+    setSetting_('shares', JSON.stringify(shares));
+  }
+  return shares[name];
+}
+
+function unshareBrand_(name) {
+  const shares = getShares_();
+  if (!(name in shares)) return;
+  delete shares[name];
+  setSetting_('shares', JSON.stringify(shares));
+}
+
+// What a client sees: one brand's card, reels and creators. Team names are left out.
+function sharedBrand_(token) {
+  token = String(token || '');
+  if (token.length < 20) throw new Error('This link isn\'t complete. Check you copied all of it.');
+  const shares = getShares_();
+  const name = Object.keys(shares).filter(function (k) { return shares[k] === token; })[0];
+  if (!name) throw new Error('This link has been turned off. Ask for a new one.');
+  const all = listAll_();
+  const brand = all.brands.filter(function (b) { return b.name === name; })[0] || { name: name, logo: '', color: '', niches: [] };
+  const records = all.records.filter(function (r) { return String(r.brand) === name; }).map(function (r) {
+    const o = Object.assign({}, r);
+    o.savedBy = '';
+    return o;
+  });
+  return { brand: brand, records: records, festive: all.festive };
 }
 
 // ---------------------------------------------------------------- images

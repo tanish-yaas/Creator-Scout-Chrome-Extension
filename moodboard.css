@@ -687,3 +687,31 @@ body.fit.in-brand .back { top: 4px; }
 }
 .crop-presets button:hover { color: var(--text); border-color: var(--line-strong); }
 .crop-presets button.on { color: var(--text); border-color: rgba(166, 255, 61, 0.6); background: rgba(166, 255, 61, 0.08); }
+
+/* ---------- client links ---------- */
+.share-btn { color: var(--text); border-color: var(--line-strong); }
+.share-box { width: min(560px, 100%); }
+.share-link { display: flex; gap: 8px; margin-top: 16px; }
+.share-link input {
+  flex: 1; min-width: 0; background: transparent; border: 1px solid var(--line-strong); border-radius: 999px;
+  padding: 10px 16px; font: inherit; font-size: 13px; color: var(--text);
+}
+.share-link input:focus { outline: none; border-color: rgba(166, 255, 61, 0.5); }
+.sh-copy { padding: 10px 18px; font-size: 13.5px; font-weight: 500; white-space: nowrap; }
+.share-actions { align-items: center; margin-top: 18px; }
+.sh-manage { display: flex; gap: 16px; margin-right: auto; }
+.danger-link { color: #ff8a8a; }
+.danger-link:hover { border-color: #ff6b6b; }
+
+/* What a client sees: the same moodboard, one brand, nothing to edit */
+.share-msg { display: none; }
+html.share-mode .share-msg { display: block; position: fixed; inset: 45% 0 auto; text-align: center; color: var(--dim); font-size: 15px; margin: 0; padding: 0 24px; }
+html.share-mode body:not(.share-ready) .hero,
+html.share-mode body:not(.share-ready) .stage,
+html.share-mode body:not(.share-ready) .info { visibility: hidden; }
+html.share-mode #sync-state, html.share-mode #update-btn, html.share-mode #share-btn, html.share-mode #new-brand,
+html.share-mode .top-actions, html.share-mode #back, html.share-mode #brand-actions,
+html.share-mode #add-links-btn, html.share-mode #add-links, html.share-mode .card-del { display: none !important; }
+html.share-mode #home-link { cursor: default; }
+.chip.static { cursor: default; }
+.chip.static:not([style]) { --c: rgba(255, 255, 255, 0.35); }

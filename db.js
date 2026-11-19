@@ -95,7 +95,8 @@ async function getTaxonomy() {
   return {
     brands: t.brands || {},            // { "Brand": ["Niche", ...] }
     meta: t.meta || {},                // { "Brand": { logo, color } }
-    festive: withDefaultTypes(t.festive)
+    festive: withDefaultTypes(t.festive),
+    shares: t.shares || {}             // { "Brand": token } for client links
   };
 }
 async function setTaxonomy(tax) {
@@ -379,7 +380,8 @@ function downloadBlob(blob, filename) {
 // chrome.storage.local acts as a cache, so pages render instantly and work offline.
 // ==========================================
 
-const teamOn = () => typeof TEAM_DB_URL !== 'undefined' && !!TEAM_DB_URL;
+// A client link (moodboard.html opened from the web) never talks to the team board directly
+const teamOn = () => typeof TEAM_DB_URL !== 'undefined' && !!TEAM_DB_URL && typeof globalThis.SCOUT_SHARE !== 'string';
 // Company-only deployments need the person's Google sign-in cookies
 const teamCreds = () => (typeof TEAM_DOMAIN_ONLY !== 'undefined' && TEAM_DOMAIN_ONLY) ? 'include' : 'omit';
 
@@ -446,7 +448,7 @@ function pullTeam() {
       const brands = {}, meta = {};
       d.brands.forEach(b => { brands[b.name] = b.niches || []; meta[b.name] = { logo: b.logo || '', color: b.color || '' }; });
       Object.keys(tax.brands).forEach(b => { if (pending.some(r => r.brand === b) && !brands[b]) brands[b] = tax.brands[b]; });
-      const newTax = { brands, meta, festive: withDefaultTypes(d.festive && d.festive.length ? d.festive : tax.festive) };
+      const newTax = { brands, meta, festive: withDefaultTypes(d.festive && d.festive.length ? d.festive : tax.festive), shares: d.shares || tax.shares || {} };
 
       if (JSON.stringify(merged) !== JSON.stringify(await getRecords())) await setRecords(merged);
       if (JSON.stringify(newTax) !== JSON.stringify(tax)) await setTaxonomy(newTax);
@@ -586,6 +588,33 @@ async function saveFestiveList(list) {
   tax.festive = list;
   await setTaxonomy(tax);
   if (teamOn()) await teamCall('festive', { festive: list });
+}
+
+// ---------- client links ----------
+
+function shareUrl(token) {
+  const page = typeof SHARE_PAGE_URL !== 'undefined' && SHARE_PAGE_URL ? SHARE_PAGE_URL : '';
+  return token && page ? `${page}#share=${token}` : '';
+}
+
+async function shareBrand(name, reset = false) {
+  let d;
+  try { d = await teamCall('share', { name, reset }); }
+  catch (e) {
+    if (/Unknown action/.test(e.message)) throw new Error('The team script needs updating before links work. See team-backend/SETUP.md, "Updating the script later".');
+    throw e;
+  }
+  const tax = await getTaxonomy();
+  tax.shares = { ...tax.shares, [name]: d.token };
+  await setTaxonomy(tax);
+  return d.token;
+}
+
+async function unshareBrand(name) {
+  await teamCall('unshare', { name });
+  const tax = await getTaxonomy();
+  delete tax.shares[name];
+  await setTaxonomy(tax);
 }
 
 // Keep a page in sync: pull now, every 30 s, and whenever the tab comes back into view

@@ -1,4 +1,4 @@
-# Creator Scout v4.5 🕵️‍♂️
+# Creator Scout v4.6 🕵️‍♂️
 
 Creator Scout is a Chrome extension for scouting Instagram and YouTube creators and their content. Everything you save stays inside the extension. You copy it into any Google Sheet when you want, it still syncs to the master database, and it lands on a moodboard grouped by brand and niche.
 
@@ -60,7 +60,7 @@ Updates come from `UPDATE_REPO` / `UPDATE_BRANCH` in `config.js`. The update nev
 | `platforms.js` | Instagram and YouTube lookups shared by the popup and dashboard |
 | `team-backend/` | Apps Script for the shared team database, and its setup guide |
 | `moodboard.html / moodboard.js / moodboard.css` | The moodboard dashboard |
-| `icons/` | The logo (`logo.svg`) and extension icon (16, 32, 48, 128 px) |
+| `icons/` | The Flash logo (`logo.svg`) and extension icon (16, 32, 48, 128 px) |
 | `fonts/` | Bundled Scout Pixel (headline font made for this extension) and Inter (SIL Open Font License) |
 
 Each browser keeps a local copy, so pages open instantly and work offline. The team database is the shared source of truth. Thumbnails are saved as small copies, so they don't break when Instagram's image links expire.

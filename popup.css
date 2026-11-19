@@ -242,7 +242,7 @@ footer #status-msg { flex: 1; text-align: left; min-width: 0; }
 .who-form input[type="text"] { flex: 1; }
 .who-form .ghost { padding: 6px 12px; }
 
-.logo-mark { width: 22px; height: 22px; flex-shrink: 0; filter: drop-shadow(0 0 6px rgba(166, 255, 61, 0.35)); }
+.logo-mark { width: 22px; height: 22px; flex-shrink: 0; filter: drop-shadow(0 0 6px rgba(160, 200, 255, 0.45)); }
 .brand { gap: 8px; }
 .brand-dot { width: 6px; height: 6px; margin-left: 2px; }
 body { overflow-x: hidden; }
@@ -323,7 +323,7 @@ body.mb-mode .mode-btn {
 }
 body.mb-mode .mode-knob { background: rgba(215, 139, 255, 0.45); }
 body.mb-mode .mode-knob::after { transform: translateX(10px); background: #fff; box-shadow: 0 0 8px 1px var(--acid-glow); }
-body.mb-mode .logo-play { fill: var(--acid); }
+body.mb-mode .logo-ink { fill: var(--acid); }
 body.mb-mode .logo-mark { filter: drop-shadow(0 0 8px var(--acid-glow)); }
 body.mb-mode .card { border-color: rgba(215, 139, 255, 0.28); box-shadow: 0 0 24px -12px var(--acid-glow); }
 body.mb-mode input[type="text"]:focus, body.mb-mode select:focus { border-color: rgba(215, 139, 255, 0.6); }

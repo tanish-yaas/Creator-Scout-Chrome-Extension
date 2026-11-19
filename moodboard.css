@@ -728,3 +728,13 @@ html.share-mode #home-link { cursor: default; }
 .brand-icon img { position: absolute; inset: 14%; width: 72%; height: 72%; object-fit: contain; display: block; }
 .brand-icon img.full { inset: 0; width: 100%; height: 100%; object-fit: cover; }
 .brand-icon span { font-family: var(--pixel); font-size: 1.6em; line-height: 1; color: var(--ink, #fff); }
+
+/* home tagline: one line, centred, shrinks with the window */
+body:not(.in-brand) .title-row { width: 100%; }
+body:not(.in-brand) .title,
+body.fit:not(.in-brand) .title {
+  white-space: nowrap; max-width: 100%; text-align: center;
+  font-size: clamp(14px, 3.1vw, 56px); line-height: 1.15;
+}
+body.fit:not(.in-brand) .title { font-size: clamp(14px, min(3.1vw, 5.6vh), 56px); }
+.sub { margin-left: auto; margin-right: auto; text-align: center; }

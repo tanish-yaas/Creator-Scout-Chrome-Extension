@@ -173,7 +173,7 @@ function renderHero() {
   if (!inBrand) {
     renderBrandIcon(null);
     const brands = brandNames().filter(b => b !== UNFILED).length;
-    $('title').innerHTML = 'Everything you scouted,<br>filed by brand';
+    $('title').textContent = 'Everything you scouted as a team, all in one place';
     $('title').removeAttribute('title');
     $('sub').textContent = S.records.length
       ? `${S.records.length} saved${brands ? ` across ${brands} ${brands === 1 ? 'brand' : 'brands'}` : ', none filed under a brand yet'}. Swipe, drag or use the arrow keys, and open a card to see its reels and creators.`

@@ -1,4 +1,4 @@
-# Creator Scout v4.8 🕵️‍♂️
+# Creator Scout v4.9 🕵️‍♂️
 
 Creator Scout is a Chrome extension for scouting Instagram and YouTube creators and their content. Everything you save stays inside the extension. You copy it into any Google Sheet when you want, it still syncs to the master database, and it lands on a moodboard grouped by brand and niche.
 
@@ -16,7 +16,7 @@ Creator Scout is a Chrome extension for scouting Instagram and YouTube creators 
   * The home screen is a curved carousel with one card per brand, sized to fit on one screen. Each card glows in its own colours, taken automatically from its logo or reel cover, and the background glow follows the card in the middle.
   * Use **Edit card** to upload the brand's logo or any photo and pick a card colour, and **New brand** to add one. Size the image with the slider, + and −, or by scrolling on the card; drag it to move it; or use **Logo size**, **Whole image** and **Fill card**.
   * The carousel is a wheel that loops forever: scroll (trackpad or mouse wheel), drag with momentum, or use the arrow keys, and it glides and settles on a card. With only a few brands, the wheel repeats them so there's never an empty gap.
-  * Open a brand to get two tabs:
+  * Open a brand and its logo sits next to its name as a rounded square icon (the initial on the card colour if there's no logo). Then there are two tabs:
     * **Reels**: a carousel or grid of its reels. The **Filters** menu next to Carousel / Grid filters by niche, campaign type and platform. Click a reel to play it embedded (Instagram or YouTube). The player panel shows the creator and stats, and that's where you change its brand, niche and campaign type or remove it. Use **+ Add reel links** to paste reference links; they're looked up and added with their creators.
     * **Creators**: everyone saved for that brand, with followers, tier, niches, reel count and who saved them. **Copy list for Sheets** copies the table.
   * Double-click a brand's title to rename it for everyone.

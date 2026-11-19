@@ -171,6 +171,7 @@ function renderHero() {
   $('search').placeholder = !inBrand ? 'Search brands, creators, captions' : S.tab === 'creators' ? 'Search creators' : 'Search creators, captions, niches';
 
   if (!inBrand) {
+    renderBrandIcon(null);
     const brands = brandNames().filter(b => b !== UNFILED).length;
     $('title').innerHTML = 'Everything you scouted,<br>filed by brand';
     $('title').removeAttribute('title');
@@ -182,6 +183,7 @@ function renderHero() {
     const reels = all.filter(isContent).length;
     const creators = creatorsOf(all).length;
     $('title').textContent = brandLabel(S.brand);
+    renderBrandIcon(S.brand === UNFILED ? null : S.brand);
     $('title').title = S.brand === UNFILED || SHARE ? '' : 'Double-click to rename';
     $('sub').textContent = S.brand === UNFILED
       ? `${all.length} saved without a brand. Give them a brand to file them.`
@@ -191,6 +193,32 @@ function renderHero() {
     document.querySelectorAll('#view-tabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === S.tab));
   }
 }
+
+// The brand's logo as a rounded square next to its name: a card-shaped image is cropped to its
+// centre (where the logo sits), a plain logo is fitted inside; no logo shows the initial.
+function renderBrandIcon(name) {
+  const el = $('brand-icon');
+  if (!name) { el.classList.add('hidden'); el.dataset.key = ''; return; }
+  const meta = metaOf(name);
+  const key = `${name}|${meta.logo || ''}|${meta.color || ''}`;
+  el.classList.remove('hidden');
+  if (el.dataset.key === key) return;
+  el.dataset.key = key;
+  const size = el.style.getPropertyValue('--icon-size');
+  el.style.cssText = cardStyle(meta.color);
+  if (size) el.style.setProperty('--icon-size', size);
+  el.innerHTML = meta.logo
+    ? `<img src="${esc(meta.logo)}" alt="" draggable="false" class="${framed.get(meta.logo) ? 'full' : ''}">`
+    : `<span>${esc(brandLabel(name).charAt(0).toUpperCase())}</span>`;
+  const img = el.querySelector('img');
+  if (img) img.addEventListener('error', () => { el.innerHTML = `<span>${esc(brandLabel(name).charAt(0).toUpperCase())}</span>`; }, { once: true });
+}
+
+// Keep the icon as tall as the brand name's letters, whatever size the title is at
+new ResizeObserver(() => {
+  const fs = parseFloat(getComputedStyle($('title')).fontSize) || 56;
+  $('brand-icon').style.setProperty('--icon-size', Math.round(fs * 0.95) + 'px');
+}).observe($('title'));
 
 // Filters live in one menu next to Carousel / Grid: niches, campaign types and platform
 function activeFilterCount() {
@@ -1043,7 +1071,7 @@ const framed = new Map();   // image URL -> true when it was saved at the card's
 const isFramedSize = (w, h) => w && h && Math.abs(h / w - CARD_RATIO) / CARD_RATIO < 0.015;
 document.addEventListener('load', e => {
   const img = e.target;
-  if (!(img instanceof HTMLImageElement) || !img.closest('.logo-cover')) return;
+  if (!(img instanceof HTMLImageElement) || !img.closest('.logo-cover, .brand-icon')) return;
   const full = isFramedSize(img.naturalWidth, img.naturalHeight);
   framed.set(img.getAttribute('src'), full);
   img.classList.toggle('full', full);

@@ -715,3 +715,16 @@ html.share-mode #add-links-btn, html.share-mode #add-links, html.share-mode .car
 html.share-mode #home-link { cursor: default; }
 .chip.static { cursor: default; }
 .chip.static:not([style]) { --c: rgba(255, 255, 255, 0.35); }
+
+/* brand logo next to the brand name */
+.brand-icon {
+  width: var(--icon-size, 56px); height: var(--icon-size, 56px); flex-shrink: 0; box-sizing: border-box;
+  font-size: calc(var(--icon-size, 56px) * 0.3);
+  border-radius: 22%; overflow: hidden; position: relative;
+  background: var(--bc, #141414); border: 1px solid var(--line-strong);
+  display: grid; place-items: center;
+  box-shadow: 0 0 24px -8px var(--halo, rgba(166, 255, 61, 0.5));
+}
+.brand-icon img { position: absolute; inset: 14%; width: 72%; height: 72%; object-fit: contain; display: block; }
+.brand-icon img.full { inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.brand-icon span { font-family: var(--pixel); font-size: 1.6em; line-height: 1; color: var(--ink, #fff); }

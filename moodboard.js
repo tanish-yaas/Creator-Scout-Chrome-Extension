@@ -1320,78 +1320,6 @@ async function deleteBrand(name) {
 }
 $('bm-delete').addEventListener('click', () => { if (bm && bm.original) deleteBrand(bm.original); });
 
-// ---------- sample board (for testing) ----------
-
-const SAMPLE_BY = 'Sample board';
-const SAMPLE_BOARD = [
-  { brand: 'Nykaa', niche: 'Skincare reviews', festive: [], links: ['https://www.instagram.com/reel/DDceg7iTGTa/'] },
-  { brand: 'Zomato', niche: 'Delivery stories', festive: [], links: ['https://www.instagram.com/reel/C5qTdnMy7Zl/'] },
-  { brand: 'Swiggy', niche: 'Mumbai street food', festive: ['Diwali'], links: [
-    'https://www.instagram.com/reel/CcP-ujQjD3V/', 'https://www.instagram.com/reel/CbcXfUsPpVd/', 'https://www.instagram.com/reel/CbhFWwGOqqk/'] },
-  { brand: 'Kofuku', niche: 'Restaurant reviews', festive: [], links: [
-    'https://www.instagram.com/reel/Cbr9eFblneC/', 'https://www.instagram.com/reel/CbxIkHGqFPx/', 'https://www.instagram.com/reel/Cbz25Hml2z5/', 'https://www.instagram.com/p/CcK2GEXDR1T/'] }
-];
-const hasSamples = () => S.records.some(r => r.savedBy === SAMPLE_BY);
-
-function renderSampleBtn() {
-  $('sample-btn').textContent = hasSamples() ? 'Remove sample board' : 'Load sample board';
-}
-
-let sampleBusy = false;
-$('sample-btn').addEventListener('click', async () => {
-  if (sampleBusy) return;
-  sampleBusy = true;
-  $('sample-btn').disabled = true;
-  try { if (hasSamples()) await removeSampleBoard(); else await loadSampleBoard(); }
-  finally { sampleBusy = false; $('sample-btn').disabled = false; renderSampleBtn(); }
-});
-
-// Real public reels, looked up with your Instagram session so cards get real covers and creators
-async function loadSampleBoard() {
-  const total = SAMPLE_BOARD.reduce((n, b) => n + b.links.length, 0);
-  let done = 0;
-  for (const b of SAMPLE_BOARD) {
-    for (const link of b.links) {
-      toast(`Adding sample reels ${done + 1} of ${total}…`);
-      let found = null;
-      try { found = await lookupLink(link); } catch (e) { found = null; }
-      const creator = (found && found.creator) || {};
-      const content = (found && found.content) || { kind: link.includes('/p/') ? 'post' : 'reel', url: link };
-      const thumb = content.thumbUrl ? await thumbToDataUrl(content.thumbUrl) : '';
-      const avatar = creator.avatarUrl ? await thumbToDataUrl(creator.avatarUrl, 240) : '';
-      const thumbOk = thumb.startsWith('data:');
-      const followers = Number(creator.followers) || 0;
-      await upsertRecord({
-        platform: 'Instagram', username: creator.username || '', name: creator.name || '', followers,
-        category: '--', tier: calculateTier(followers).name, type: '', url: creator.url || '',
-        avgViews: '--', country: '--', contentUrl: content.url || link, contentKind: content.kind || 'reel',
-        thumb: thumbOk ? thumb : '', thumbUrl: thumbOk ? (content.thumbUrl || '') : '', avatar: avatar.startsWith('data:') ? avatar : '',
-        caption: content.caption || '', contentViews: 0, contentLikes: content.likes || 0, contentComments: content.comments || 0,
-        postedAt: content.postedAt || '', brand: b.brand, niche: b.niche, festive: b.festive, savedBy: SAMPLE_BY
-      });
-      done++;
-    }
-  }
-  await load();
-  const i = S.items.findIndex(it => it.name === 'Swiggy');
-  if (i !== -1) go(i);
-  toast(`Sample board added: ${total} reels across ${SAMPLE_BOARD.length} brands`);
-}
-
-async function removeSampleBoard() {
-  const samples = S.records.filter(r => r.savedBy === SAMPLE_BY);
-  toast('Removing the sample board…');
-  for (const r of samples) { try { await deleteRecord(r.id); } catch (e) { /* keep going */ } }
-  await load();
-  // Sample brands with nothing else in them go too
-  for (const b of SAMPLE_BOARD) {
-    if (!S.records.some(r => r.brand === b.brand)) { try { await deleteBrandEverywhere(b.brand); } catch (e) { /* ignore */ } }
-  }
-  if (SAMPLE_BOARD.some(b => b.brand === S.brand)) goHome();
-  await load();
-  toast('Sample board removed');
-}
-
 // ---------- copy links ----------
 
 $('copy-links').addEventListener('click', async () => {
@@ -1428,7 +1356,6 @@ function toast(msg) {
 // ---------- render ----------
 
 function render() {
-  renderSampleBtn();
   if (S.brand !== null && S.brand !== UNFILED && !brandNames().includes(S.brand)) S.brand = null;
   const creatorsTab = S.brand !== null && S.tab === 'creators';
   S.items = S.brand === null ? brandItems() : creatorsTab ? [] : reelItems();

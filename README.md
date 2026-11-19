@@ -1,14 +1,20 @@
-# Creator Scout v4.4 🕵️‍♂️
+# Creator Scout v4.5 🕵️‍♂️
 
 Creator Scout is a Chrome extension for scouting Instagram and YouTube creators and their content. Everything you save stays inside the extension. You copy it into any Google Sheet when you want, it still syncs to the master database, and it lands on a moodboard grouped by brand and niche.
 
 ## ✨ Features
-* **One click on a reel:** Open the popup on any Instagram reel, post, profile, or YouTube short, video or channel, and it captures the page straight away. You get the thumbnail, caption and stats, plus the creator's name, followers, tier and profile picture. Pick a brand (it remembers your last one), optionally a niche and campaign type (festivals like Diwali, seasons like Summer, sales, launches), and press **Save to moodboard**. The reel lands on that brand's moodboard and the creator is added to the sheet.
+* **One click on a reel:** Open the popup on any Instagram reel, post, profile, or YouTube short, video or channel, and it captures the page straight away. You get the thumbnail, caption and stats, plus the creator's name, followers, tier and profile picture.
+* **Two modes:**
+  * **Regular mode** (how the popup opens): **Save to sheet** adds the creator to your sheet on this browser, ready to copy into Google Sheets. It doesn't touch the moodboard.
+  * **Moodboard mode** (the switch at the top of the popup): the popup turns violet with a moving halo so it's obvious. Pick a brand, optionally a niche and campaign type (festivals like Diwali, seasons like Summer, sales, launches), and press **Add to moodboard**. The reel lands on that brand's moodboard for the whole team, and in your sheet.
+  * Both modes still send every save to the Make.com master database.
+* **Fast saves:** Saving is instant. The thumbnail and profile picture are copied as soon as the page is fetched, and moodboard saves upload to the team board in the background, so you can close the popup straight away.
+* **Updates in one click:** When a newer version is on GitHub, the moodboard shows **Update to x**, the popup shows an update bar and the toolbar icon shows **NEW**. The first time, pick your Creator Scout folder and allow editing (choose **Allow on every visit** if Chrome offers it). After that, updates install by themselves whenever the moodboard or sheet opens, and Creator Scout restarts with all your data. You can turn automatic updates off on the update page.
 * **Brand (was IP):** Brand and IP are the same thing now. Old rows with an IP are moved to Brand automatically, and the Make.com payload still includes `ip` (a copy of brand) so the existing scenario keeps working.
 * **Shared team board:** With the team database connected (see `team-backend/SETUP.md`), everyone using the extension sees and adds to the same board and sheet, on any device. Saves made while offline upload automatically later.
 * **Moodboard dashboard:**
   * The home screen is a curved carousel with one card per brand, sized to fit on one screen. Each card glows in its own colours, taken automatically from its logo or reel cover, and the background glow follows the card in the middle.
-  * Use **Edit card** to upload the brand's logo and pick a card colour, and **New brand** to add one.
+  * Use **Edit card** to upload the brand's logo or any photo and pick a card colour, and **New brand** to add one. Size the image with the slider, + and −, or by scrolling on the card; drag it to move it; or use **Logo size**, **Whole image** and **Fill card**.
   * The carousel is a wheel that loops forever: scroll (trackpad or mouse wheel), drag with momentum, or use the arrow keys, and it glides and settles on a card. With only a few brands, the wheel repeats them so there's never an empty gap.
   * Open a brand to get two tabs:
     * **Reels**: a carousel or grid of its reels. The **Filters** menu next to Carousel / Grid filters by niche, campaign type and platform. Click a reel to play it embedded (Instagram or YouTube). The player panel shows the creator and stats, and that's where you change its brand, niche and campaign type or remove it. Use **+ Add reel links** to paste reference links; they're looked up and added with their creators.
@@ -33,7 +39,13 @@ Each save POSTs JSON to `MASTER_WEBHOOK_URL` (in `config.js`, same URL as before
 
 ## 🧩 Install
 1. Fill in `config.js`. The team database URL and key come from `team-backend/SETUP.md`. Leave them empty to keep data on one browser.
-2. Go to `chrome://extensions`, turn on **Developer mode**, click **Load unpacked**, and pick this folder.
+2. Go to `chrome://extensions`, turn on **Developer mode**, click **Load unpacked**, and pick this folder. Keep the folder where it is: updates are written into it.
+
+## 🚀 Shipping an update to the team
+1. Make your changes and raise `"version"` in `manifest.json` (for example 4.5 → 4.6). Without a higher version, nobody is offered the update.
+2. Push to `main` on GitHub. Within about 15 minutes everyone sees the update, and anyone who has allowed their folder gets it automatically.
+
+Updates come from `UPDATE_REPO` / `UPDATE_BRANCH` in `config.js`. The update never replaces a filled-in team database URL with a blank one, and it checks that the folder and the download are both Creator Scout before writing anything.
 
 ## 🗂 Files
 | File | What it does |
@@ -41,7 +53,9 @@ Each save POSTs JSON to `MASTER_WEBHOOK_URL` (in `config.js`, same URL as before
 | `popup.html / popup.js / popup.css` | The popup: fetch, tag and save |
 | `sheet.html / sheet.js / sheet.css` | Creator list: the built-in sheet with copy and export |
 | `scraper.js` | Injected into Instagram to read profiles, reels and posts |
-| `config.js` | Master webhook, YouTube key and team database settings |
+| `config.js` | Master webhook, YouTube key, team database and update settings |
+| `updater.js / update.html / update.js / update.css` | Update checks and the one-click update page |
+| `background.js` | Uploads moodboard saves, marks the icon when an update is ready, reopens tabs after an update |
 | `db.js` | Storage, team sync, sheet export and number helpers |
 | `platforms.js` | Instagram and YouTube lookups shared by the popup and dashboard |
 | `team-backend/` | Apps Script for the shared team database, and its setup guide |

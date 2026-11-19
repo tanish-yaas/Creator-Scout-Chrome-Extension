@@ -119,7 +119,7 @@ async function registerTaxonomy({ brand, niche, festive }) {
 }
 
 // Same content (or same profile when there is no content) = same row. Returns { record, updated }.
-async function localUpsert(rec) {
+async function localUpsert(rec, { register = true } = {}) {
   const records = await getRecords();
   const key = r => (r.contentUrl || r.url || '').toLowerCase().replace(/\/+$/, '');
   const k = key(rec);
@@ -134,7 +134,7 @@ async function localUpsert(rec) {
     records.unshift(rec);
   }
   await setRecords(records);
-  await registerTaxonomy(rec);
+  if (register) await registerTaxonomy(rec);
   return { record: rec, updated };
 }
 
@@ -434,8 +434,12 @@ function pullTeam() {
 
       // Rows that never reached the team database (saved offline, or before it was connected) get uploaded.
       // Rows that were synced before but are gone from the server were deleted by a teammate, so they drop.
-      const pending = local.filter(r => !r.synced && !serverKeys.has(recordKey(r))).map(r => ({ ...r, pending: true }));
-      const merged = [...pending, ...server.map(r => ({ ...r, synced: true, exportedAt: exported.get(r.id) || null }))]
+      // Saves still waiting to upload win over the server copy, so a fresh edit is never undone mid-upload
+      const pending = local.filter(r => !r.localOnly && (r.pending || (!r.synced && !serverKeys.has(recordKey(r))))).map(r => ({ ...r, pending: true }));
+      const pendingKeys = new Set(pending.map(recordKey));
+      // Sheet-only rows (saved in regular mode) stay on this browser and never go to the moodboard
+      const sheetOnly = local.filter(r => r.localOnly && !serverKeys.has(recordKey(r)));
+      const merged = [...pending, ...sheetOnly, ...server.filter(r => !pendingKeys.has(recordKey(r))).map(r => ({ ...r, synced: true, exportedAt: exported.get(r.id) || null }))]
         .sort((a, b) => (b.savedAt || 0) - (a.savedAt || 0));
 
       const tax = await getTaxonomy();
@@ -461,17 +465,41 @@ function pullTeam() {
   return pulling;
 }
 
-// Upload anything saved while the team database was unreachable
-async function flushOutbox() {
-  if (!teamOn()) return;
-  const pending = (await getRecords()).filter(r => r.pending);
-  for (const p of pending) {
-    try {
-      const { pending: _p, synced, exportedAt, id, ...rec } = p;
-      const d = await teamCall('upsert', { record: rec });
-      await replaceLocal(p.id, { ...normalizeRecord(d.record), synced: true, exportedAt: exportedAt || null });
-    } catch (e) { break; }
-  }
+// Upload saves that are waiting (new saves, and anything saved while offline). One upload at a time.
+let flushing = null;
+function flushOutbox() {
+  if (!teamOn()) return Promise.resolve();
+  if (flushing) return flushing.then(() => flushOutbox());
+  flushing = (async () => {
+    const pending = (await getRecords()).filter(r => r.pending);
+    for (const p of pending) {
+      try {
+        const { pending: _p, synced, exportedAt, id, localOnly, ...rec } = p;
+        const d = await teamCall('upsert', { record: rec });
+        // A newer save of the same row may have landed while this one uploaded; keep it queued
+        const now = (await getRecords()).find(r => r.id === p.id);
+        if (now && now.lastSavedAt && p.lastSavedAt && now.lastSavedAt > p.lastSavedAt) continue;
+        await replaceLocal(p.id, { ...normalizeRecord(d.record), synced: true, exportedAt: exportedAt || null });
+      } catch (e) { break; }
+    }
+  })().finally(() => { flushing = null; });
+  return flushing;
+}
+
+// Hand the upload to the background worker so it finishes even after the popup closes
+function queueUpload() {
+  try {
+    chrome.runtime.sendMessage({ type: 'scout-flush' }).catch(() => flushOutbox());
+  } catch (e) { flushOutbox(); }
+}
+
+// Moodboard save: lands on this browser (and the moodboard) straight away, then uploads in the background.
+async function saveToBoard(rec) {
+  rec = { ...normalizeRecord(rec), lastSavedAt: Date.now() };
+  if (!teamOn()) return localUpsert(rec);
+  const r = await localUpsert({ ...rec, localOnly: false, synced: false, pending: true });
+  queueUpload();
+  return r;
 }
 
 async function replaceLocal(oldId, rec) {
@@ -483,18 +511,30 @@ async function replaceLocal(oldId, rec) {
 
 // ---------- the functions pages call ----------
 
+// Regular mode: the row goes to this browser's sheet only, not the team moodboard.
+// If the same reel / creator is already on the moodboard, that row is refreshed instead.
+async function saveToSheet(rec) {
+  rec = { ...normalizeRecord(rec), lastSavedAt: Date.now() };
+  const existing = (await getRecords()).find(r => recordKey(r) === recordKey(rec));
+  if (existing && existing.synced) return saveToBoard({ ...rec, brand: rec.brand || existing.brand, niche: rec.niche || existing.niche, festive: rec.festive && rec.festive.length ? rec.festive : existing.festive });
+  return localUpsert({ ...rec, localOnly: true, pending: false }, { register: false });
+}
+
+// Rows that belong on the moodboard (sheet-only rows are left out)
+const onMoodboard = r => !r.localOnly;
+
 async function upsertRecord(rec) {
   rec = { ...normalizeRecord(rec), lastSavedAt: Date.now() };
   if (!teamOn()) return localUpsert(rec);
   try {
-    const { pending, synced, exportedAt, ...clean } = rec;
+    const { pending, synced, exportedAt, localOnly, ...clean } = rec;
     const d = await teamCall('upsert', { record: clean });
     const saved = { ...normalizeRecord(d.record), synced: true };
     await replaceLocal(saved.id, saved);
     await registerTaxonomy(saved);
     return { record: saved, updated: d.updated };
   } catch (e) {
-    const r = await localUpsert({ ...rec, pending: true });
+    const r = await localUpsert({ ...rec, localOnly: false, pending: true });
     return { ...r, offline: true, error: e.message };
   }
 }

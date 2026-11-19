@@ -9,12 +9,22 @@
   <div class="app">
     <header class="top">
       <div class="brand">
-        <svg class="logo-mark" viewBox="0 0 32 32" fill="none" aria-hidden="true"><rect x="3.6" y="9.5" width="8" height="14" rx="2" transform="rotate(-16 7.6 16.5)" fill="#EDEDED" fill-opacity="0.5"/><rect x="20.4" y="9.5" width="8" height="14" rx="2" transform="rotate(16 24.4 16.5)" fill="#EDEDED" fill-opacity="0.5"/><rect x="10.75" y="5.5" width="10.5" height="19" rx="2.6" fill="#A6FF3D"/><path d="M14.4 11.6 L19.2 15 L14.4 18.4 Z" fill="#000"/></svg>
+        <svg class="logo-mark" viewBox="0 0 32 32" fill="none" aria-hidden="true"><rect x="3.6" y="9.5" width="8" height="14" rx="2" transform="rotate(-16 7.6 16.5)" fill="#EDEDED" fill-opacity="0.5"/><rect x="20.4" y="9.5" width="8" height="14" rx="2" transform="rotate(16 24.4 16.5)" fill="#EDEDED" fill-opacity="0.5"/><rect class="logo-play" x="10.75" y="5.5" width="10.5" height="19" rx="2.6" fill="#A6FF3D"/><path d="M14.4 11.6 L19.2 15 L14.4 18.4 Z" fill="#000"/></svg>
         <span class="brand-name">Creator Scout</span>
         <span id="status-dot" class="brand-dot"></span>
       </div>
-      <button id="open-moodboard" class="ghost" title="Open the moodboard in a new tab">Moodboard ↗</button>
+      <div class="top-right">
+        <button id="mode-btn" class="mode-btn" role="switch" aria-checked="false" title="Moodboard mode: saves go to the team moodboard">
+          <span class="mode-knob" aria-hidden="true"></span>Moodboard mode
+        </button>
+        <button id="open-moodboard" class="ghost icon" title="Open the moodboard in a new tab" aria-label="Open the moodboard">↗</button>
+      </div>
     </header>
+
+    <button id="update-bar" class="update-bar hidden">
+      <span id="update-text">A new version is ready</span><span class="update-go">Update</span>
+    </button>
+
 
     <!-- ================= SCOUT ================= -->
     <main id="view-scout" class="view">
@@ -100,7 +110,7 @@
         </div>
       </section>
 
-      <button id="send-btn" class="cta glow-pill">Save</button>
+      <button id="send-btn" class="cta glow-pill">Save to sheet</button>
 
       <button id="open-sheet" class="sheet-row">
         <span class="sheet-label">Open sheet</span>
@@ -118,6 +128,7 @@
     </footer>
   </div>
   <script src="config.js"></script>
+  <script src="updater.js"></script>
   <script src="db.js"></script>
   <script src="platforms.js"></script>
   <script src="scraper.js"></script>

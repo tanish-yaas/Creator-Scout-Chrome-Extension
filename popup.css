@@ -249,3 +249,124 @@ body { overflow-x: hidden; }
 footer { flex-wrap: nowrap; }
 footer #status-msg { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .whoami { flex-shrink: 0; }
+
+/* ---------- header controls ---------- */
+
+.top-right { display: flex; align-items: center; gap: 6px; }
+.ghost.icon { width: 28px; height: 28px; padding: 0; display: grid; place-items: center; font-size: 13px; }
+.mode-btn {
+  display: inline-flex; align-items: center; gap: 7px;
+  border: 1px solid var(--line); border-radius: 999px; padding: 4px 11px 4px 5px;
+  font-size: 11.5px; font-weight: 400; color: var(--dim);
+  transition: color 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+}
+.mode-btn:hover { color: var(--text); border-color: var(--line-strong); }
+.mode-knob {
+  position: relative; width: 24px; height: 14px; border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1); transition: background 0.25s ease;
+}
+.mode-knob::after {
+  content: ""; position: absolute; top: 2px; left: 2px; width: 10px; height: 10px; border-radius: 50%;
+  background: var(--dim); transition: transform 0.25s ease, background 0.25s ease, box-shadow 0.25s ease;
+}
+
+/* ---------- update bar ---------- */
+
+.update-bar {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 7px 8px 7px 12px; border: 1px solid rgba(166, 255, 61, 0.45); border-radius: 12px;
+  background: rgba(166, 255, 61, 0.06); font-size: 12px; color: var(--text); text-align: left;
+}
+.update-go {
+  border-radius: 999px; padding: 4px 11px; background: var(--acid); color: #000; font-weight: 500; font-size: 11.5px;
+  box-shadow: 0 0 12px -2px var(--acid-glow);
+}
+.update-bar:hover .update-go { filter: brightness(1.08); }
+
+/* ==========================================================
+   Moodboard mode: the whole popup turns violet and lights up,
+   so it's obvious saves are going to the team moodboard
+   ========================================================== */
+
+@property --halo-spin { syntax: "<angle>"; inherits: false; initial-value: 0deg; }
+
+body { transition: background 0.4s ease; }
+body.mb-mode {
+  --acid: #D78BFF;
+  --acid-glow: rgba(215, 139, 255, 0.6);
+  background:
+    radial-gradient(ellipse 90% 34% at 50% 0%, rgba(215, 139, 255, 0.2), transparent 70%),
+    radial-gradient(ellipse 80% 30% at 50% 100%, rgba(120, 170, 255, 0.14), transparent 70%),
+    #05020a;
+}
+/* a light that runs round the edge of the popup */
+body.mb-mode::before {
+  content: ""; position: fixed; inset: 0; z-index: 50; pointer-events: none;
+  padding: 1.5px; border-radius: 0;
+  background: conic-gradient(from var(--halo-spin), transparent 0deg 200deg, rgba(120, 170, 255, 0.9) 250deg, #D78BFF 300deg, #fff 320deg, transparent 340deg);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor; mask-composite: exclude;
+  animation: halo-spin 4.5s linear infinite;
+}
+/* and a soft glow inside the edges */
+body.mb-mode::after {
+  content: ""; position: fixed; inset: 0; z-index: 49; pointer-events: none;
+  box-shadow: inset 0 0 36px -10px var(--acid-glow);
+  animation: halo-breathe 3s ease-in-out infinite;
+}
+@keyframes halo-spin { to { --halo-spin: 360deg; } }
+@keyframes halo-breathe { 50% { box-shadow: inset 0 0 46px -6px var(--acid-glow); } }
+
+body.mb-mode .mode-btn {
+  color: #fff; border-color: rgba(215, 139, 255, 0.7);
+  background: rgba(215, 139, 255, 0.12); box-shadow: 0 0 16px -4px var(--acid-glow);
+}
+body.mb-mode .mode-knob { background: rgba(215, 139, 255, 0.45); }
+body.mb-mode .mode-knob::after { transform: translateX(10px); background: #fff; box-shadow: 0 0 8px 1px var(--acid-glow); }
+body.mb-mode .logo-play { fill: var(--acid); }
+body.mb-mode .logo-mark { filter: drop-shadow(0 0 8px var(--acid-glow)); }
+body.mb-mode .card { border-color: rgba(215, 139, 255, 0.28); box-shadow: 0 0 24px -12px var(--acid-glow); }
+body.mb-mode input[type="text"]:focus, body.mb-mode select:focus { border-color: rgba(215, 139, 255, 0.6); }
+body.mb-mode .fetch:hover { border-color: rgba(215, 139, 255, 0.6); }
+body.mb-mode .cta {
+  border-color: rgba(215, 139, 255, 0.65);
+  background: linear-gradient(180deg, rgba(215, 139, 255, 0.16), rgba(215, 139, 255, 0.04)), #07030c;
+  animation: cta-halo 2.6s ease-in-out infinite;
+}
+@keyframes cta-halo {
+  0%, 100% { box-shadow: 0 0 14px -6px var(--acid-glow); }
+  50% { box-shadow: 0 0 26px -4px var(--acid-glow); }
+}
+body.mb-mode .update-bar { border-color: rgba(166, 255, 61, 0.45); }
+.mode-note {
+  margin: -2px 0 0; padding: 7px 11px; border-radius: 10px;
+  border: 1px solid rgba(215, 139, 255, 0.35); background: rgba(215, 139, 255, 0.07);
+  font-size: 11.5px; line-height: 1.4; color: #ead2ff;
+}
+.mode-text { color: #e3b3ff !important; }
+@media (prefers-reduced-motion: reduce) {
+  body.mb-mode::before, body.mb-mode::after, body.mb-mode .cta { animation: none; }
+}
+
+/* keep the header on one line */
+.brand-name { white-space: nowrap; font-size: 14px; }
+.top { gap: 8px; }
+.mode-btn { white-space: nowrap; gap: 6px; padding: 4px 10px 4px 4px; font-size: 11px; }
+.mode-knob { width: 22px; height: 13px; }
+.mode-knob::after { width: 9px; height: 9px; }
+body.mb-mode .mode-knob::after { transform: translateX(9px); }
+.update-bar { padding: 5px 6px 5px 12px; font-size: 11.5px; }
+.update-go { padding: 3px 10px; }
+
+/* a little tighter so moodboard mode (with the extra fields) still fits the 600px popup */
+.app { gap: 8px; padding-top: 11px; }
+.view { gap: 8px; }
+.fields { gap: 8px; }
+#moodboard-fields { gap: 8px; }
+.thumb { width: 40px; height: 71px; }
+.card { gap: 7px; padding: 9px 10px; }
+.chip-input[type="text"] { width: 58px; }
+.sheet-row { padding: 7px 14px; }
+.cta { padding: 9px; }
+input[type="text"], select { padding: 6px 11px; }
+.fetch-row .seg button { padding: 5px 4px; }

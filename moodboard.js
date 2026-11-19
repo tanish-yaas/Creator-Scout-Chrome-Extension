@@ -47,7 +47,7 @@ const isEditing = () => {
 };
 
 async function load() {
-  const all = (await getRecords()).map(normalizeRecord);
+  const all = (await getRecords()).filter(onMoodboard).map(normalizeRecord);
   S.records = all.sort((a, b) => (b.savedAt || 0) - (a.savedAt || 0));
   S.taxonomy = await getTaxonomy();
   S.taxonomy.meta = S.taxonomy.meta || {};
@@ -297,7 +297,7 @@ function coverHTML(item) {
   if (item.kind === 'brand') {
     const meta = metaOf(item.name);
     const initial = `<div class="logo-cover"><span class="initial">${esc(brandLabel(item.name).charAt(0).toUpperCase())}</span></div>`;
-    if (meta.logo) return `<div class="logo-cover"><img src="${esc(meta.logo)}" alt="" draggable="false"></div>`;
+    if (meta.logo) return `<div class="logo-cover"><img src="${esc(meta.logo)}" alt="" draggable="false" class="${framed.get(meta.logo) ? 'full' : ''}"></div>`;
     if (meta.color) return initial;
     const thumbs = thumbsFor(item);
     if (!thumbs.length) return initial;
@@ -1000,11 +1000,88 @@ $('player').addEventListener('click', e => { if (e.target === $('player')) close
 
 // ---------- brand card editor (logo + colour) ----------
 
-let bm = null; // { original, name, logo, color }
+let bm = null; // { original, name, logo, color, src, zoom, panX, panY, dirty }
 
-function openBrandModal(name) {
+// ---- card image sizing ----
+// The card image is saved already framed at the card's shape (BAKE_W × BAKE_H), so it looks the same
+// for everyone and on every screen. Older logos keep their small centred look until they're edited.
+const CARD_RATIO = 1.32;
+const BAKE_W = 600, BAKE_H = Math.round(600 * CARD_RATIO);
+const ZOOM_MIN = 0.15;
+const framed = new Map();   // image URL -> true when it was saved at the card's shape
+
+const isFramedSize = (w, h) => w && h && Math.abs(h / w - CARD_RATIO) / CARD_RATIO < 0.015;
+document.addEventListener('load', e => {
+  const img = e.target;
+  if (!(img instanceof HTMLImageElement) || !img.closest('.logo-cover')) return;
+  const full = isFramedSize(img.naturalWidth, img.naturalHeight);
+  framed.set(img.getAttribute('src'), full);
+  img.classList.toggle('full', full);
+}, true);
+
+// "Logo size" (zoom 1) matches the old look: the image fits inside 64% × 40% of the card
+const logoFit = (src, W, H) => Math.min(0.64 * W / src.width, 0.40 * H / src.height);
+const zoomFor = {
+  logo: () => 1,
+  fit: src => Math.min(BAKE_W / src.width, BAKE_H / src.height) / logoFit(src, BAKE_W, BAKE_H),
+  fill: src => Math.max(BAKE_W / src.width, BAKE_H / src.height) / logoFit(src, BAKE_W, BAKE_H)
+};
+const zoomMax = src => Math.max(8, zoomFor.fill(src) * 3);
+
+function drawFramed(ctx, W, H) {
+  ctx.clearRect(0, 0, W, H);
+  if (!bm || !bm.src) return;
+  const s = logoFit(bm.src, W, H) * bm.zoom;
+  const dw = bm.src.width * s, dh = bm.src.height * s;
+  ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(bm.src, W / 2 - dw / 2 + bm.panX * W, H / 2 - dh / 2 + bm.panY * H, dw, dh);
+}
+
+function paintPreview() {
+  const c = $('bm-canvas');
+  if (!c) return;
+  const r = c.getBoundingClientRect();
+  const dpr = window.devicePixelRatio || 1;
+  c.width = Math.max(1, Math.round(r.width * dpr));
+  c.height = Math.max(1, Math.round(r.height * dpr));
+  drawFramed(c.getContext('2d'), c.width, c.height);
+  const max = zoomMax(bm.src);
+  $('bm-zoom').value = Math.round(1000 * Math.log(bm.zoom / ZOOM_MIN) / Math.log(max / ZOOM_MIN));
+  document.querySelectorAll('#bm-crop [data-preset]').forEach(b => b.classList.toggle('on', Math.abs(bm.zoom - zoomFor[b.dataset.preset](bm.src)) < 0.01 && !bm.panX && !bm.panY));
+}
+
+function setZoom(z, keepPan = true) {
+  bm.zoom = Math.min(zoomMax(bm.src), Math.max(ZOOM_MIN, z));
+  if (!keepPan) { bm.panX = 0; bm.panY = 0; }
+  bm.dirty = true;
+  paintPreview();
+}
+
+// Big photos are kept at up to 1600px so zooming in stays sharp
+async function loadSource(blob) {
+  const bmp = await createImageBitmap(blob);
+  const k = Math.min(1, 1600 / Math.max(bmp.width, bmp.height));
+  if (k === 1) return bmp;
+  return createImageBitmap(bmp, { resizeWidth: Math.round(bmp.width * k), resizeHeight: Math.round(bmp.height * k), resizeQuality: 'high' });
+}
+
+// Saved image: PNG when it has see-through parts (logos), JPEG otherwise (photos)
+function bakeLogo() {
+  const c = document.createElement('canvas');
+  c.width = BAKE_W; c.height = BAKE_H;
+  const ctx = c.getContext('2d');
+  drawFramed(ctx, BAKE_W, BAKE_H);
+  const px = ctx.getImageData(0, 0, BAKE_W, BAKE_H).data;
+  let clear = false;
+  for (let i = 3; i < px.length; i += 4 * 37) if (px[i] < 250) { clear = true; break; }
+  if (!clear) return c.toDataURL('image/jpeg', 0.88);
+  const png = c.toDataURL('image/png');
+  return png.length < 900000 ? png : c.toDataURL('image/webp', 0.9);
+}
+
+async function openBrandModal(name) {
   const meta = name ? metaOf(name) : {};
-  bm = { original: name || '', name: name || '', logo: meta.logo || '', color: meta.color || '' };
+  bm = { original: name || '', name: name || '', logo: meta.logo || '', color: meta.color || '', src: null, zoom: 1, panX: 0, panY: 0, dirty: false };
   $('bm-title').textContent = name ? 'Edit card' : 'New brand';
   $('bm-save').textContent = name ? 'Save card' : 'Create brand';
   $('bm-name').value = bm.name;
@@ -1015,6 +1092,19 @@ function openBrandModal(name) {
   $('brand-modal').classList.remove('hidden');
   document.body.classList.add('modal-open');
   setTimeout(() => (name ? $('bm-logo').parentElement : $('bm-name')).focus(), 30);
+  if (bm.logo) {
+    // Load the current image so it can be resized; a card-shaped image starts filled to the card
+    const mine = bm;
+    try {
+      const blob = await (await fetch(bm.logo)).blob();
+      const src = await loadSource(blob);
+      if (bm === mine) {
+        bm.src = src;
+        bm.zoom = isFramedSize(src.width, src.height) ? zoomFor.fit(src) : 1;
+        renderBrandPreview();
+      }
+    } catch (e) { /* can't be resized until uploaded again */ }
+  }
 }
 function closeBrandModal() {
   $('brand-modal').classList.add('hidden');
@@ -1042,14 +1132,67 @@ function renderBrandPreview() {
   const name = $('bm-name').value.trim() || 'Brand';
   const card = $('bm-card');
   card.style.cssText = cardStyle(bm.color);
-  card.className = 'card brand-card preview-card active';
-  const inner = bm.logo
-    ? `<div class="logo-cover"><img src="${esc(bm.logo)}" alt=""></div>`
-    : `<div class="logo-cover"><span class="initial">${esc(name.charAt(0).toUpperCase())}</span></div>`;
+  card.className = 'card brand-card preview-card active' + (bm.src ? ' can-frame' : '');
+  const inner = bm.src
+    ? `<div class="logo-cover"><canvas id="bm-canvas"></canvas></div>`
+    : bm.logo
+      ? `<div class="logo-cover"><img src="${esc(bm.logo)}" alt="" class="${framed.get(bm.logo) ? 'full' : ''}"></div>`
+      : `<div class="logo-cover"><span class="initial">${esc(name.charAt(0).toUpperCase())}</span></div>`;
   card.style.setProperty('--glow', hexToRgb(bm.color) || DEFAULT_GLOW);
   card.innerHTML = `<div class="media"><div class="layer">${inner}</div></div>
     <div class="cap"><h2>${esc(name)}</h2><p>Preview</p></div>`;
+  $('bm-crop').classList.toggle('hidden', !bm.src);
+  $('bm-logo-hint').textContent = bm.src || !bm.logo
+    ? 'A logo PNG with a transparent background, or any photo.'
+    : 'Upload the image again to resize it.';
+  if (bm.src) paintPreview();
 }
+
+// Resize and move the card image
+$('bm-zoom').addEventListener('input', e => {
+  if (!bm || !bm.src) return;
+  const max = zoomMax(bm.src);
+  setZoom(ZOOM_MIN * Math.pow(max / ZOOM_MIN, e.target.value / 1000));
+});
+$('bm-crop').addEventListener('click', e => {
+  if (!bm || !bm.src) return;
+  const stepBtn = e.target.closest('[data-step]');
+  if (stepBtn) setZoom(bm.zoom * (stepBtn.dataset.step === '1' ? 1.15 : 1 / 1.15));
+  const preset = e.target.closest('[data-preset]');
+  if (preset) setZoom(zoomFor[preset.dataset.preset](bm.src), false);
+});
+let frameDrag = null;
+$('bm-card').addEventListener('pointerdown', e => {
+  if (!bm || !bm.src) return;
+  e.preventDefault();
+  $('bm-card').setPointerCapture(e.pointerId);
+  const r = $('bm-card').getBoundingClientRect();
+  frameDrag = { x: e.clientX, y: e.clientY, panX: bm.panX, panY: bm.panY, w: r.width, h: r.height };
+  $('bm-card').classList.add('framing');
+});
+$('bm-card').addEventListener('pointermove', e => {
+  if (!frameDrag) return;
+  bm.panX = frameDrag.panX + (e.clientX - frameDrag.x) / frameDrag.w;
+  bm.panY = frameDrag.panY + (e.clientY - frameDrag.y) / frameDrag.h;
+  bm.dirty = true;
+  paintPreview();
+});
+const endFrameDrag = () => { frameDrag = null; $('bm-card').classList.remove('framing'); };
+$('bm-card').addEventListener('pointerup', endFrameDrag);
+$('bm-card').addEventListener('pointercancel', endFrameDrag);
+$('bm-card').addEventListener('wheel', e => {
+  if (!bm || !bm.src) return;
+  e.preventDefault();
+  setZoom(bm.zoom * Math.exp(-e.deltaY * 0.0015));
+}, { passive: false });
+document.addEventListener('keydown', e => {
+  if (!bm || !bm.src || $('brand-modal').classList.contains('hidden') || document.activeElement === $('bm-name')) return;
+  const moves = { ArrowLeft: [-0.02, 0], ArrowRight: [0.02, 0], ArrowUp: [0, -0.02], ArrowDown: [0, 0.02] };
+  if (document.activeElement === $('bm-card') && moves[e.key]) {
+    e.preventDefault();
+    bm.panX += moves[e.key][0]; bm.panY += moves[e.key][1]; bm.dirty = true; paintPreview();
+  }
+});
 $('bm-name').addEventListener('input', renderBrandPreview);
 
 // Logos are resized to 400px before upload so they load fast for the whole team
@@ -1058,20 +1201,15 @@ $('bm-logo').addEventListener('change', async e => {
   e.target.value = '';
   if (!file) return;
   try {
-    const bmp = await createImageBitmap(file);
-    const scale = Math.min(1, 400 / Math.max(bmp.width, bmp.height));
-    const canvas = document.createElement('canvas');
-    canvas.width = Math.round(bmp.width * scale);
-    canvas.height = Math.round(bmp.height * scale);
-    canvas.getContext('2d').drawImage(bmp, 0, 0, canvas.width, canvas.height);
-    bm.logo = canvas.toDataURL('image/png');
-    if (bm.logo.length > 300000) bm.logo = canvas.toDataURL('image/jpeg', 0.85);
+    bm.src = await loadSource(file);
+    bm.zoom = 1; bm.panX = 0; bm.panY = 0; bm.dirty = true;
+    $('bm-error').textContent = '';
     renderBrandPreview();
   } catch (err) {
     $('bm-error').textContent = 'That file couldn\'t be read as an image. Try a PNG or JPG.';
   }
 });
-$('bm-logo-clear').addEventListener('click', () => { bm.logo = ''; renderBrandPreview(); });
+$('bm-logo-clear').addEventListener('click', () => { bm.logo = ''; bm.src = null; bm.dirty = false; renderBrandPreview(); });
 $('bm-cancel').addEventListener('click', closeBrandModal);
 $('brand-modal').addEventListener('click', e => { if (e.target === $('brand-modal')) closeBrandModal(); });
 
@@ -1089,6 +1227,7 @@ $('bm-form').addEventListener('submit', async e => {
       await renameBrandEverywhere(bm.original, name);
       if (S.brand === bm.original) S.brand = name;
     }
+    if (bm.src && bm.dirty) bm.logo = bakeLogo();
     const before = bm.original ? metaOf(name) : {};
     const patch = {};
     if (bm.logo !== (before.logo || '')) patch.logo = bm.logo;
@@ -1321,3 +1460,21 @@ function render() {
 
 load();
 startTeamSync();
+
+// ---------- updates ----------
+// Installs by itself when the folder is already allowed (on open, or later while the tab is in the background);
+// otherwise shows an "Update to x" button that opens the update page.
+async function updateCheck({ force = false, install = true } = {}) {
+  const u = install
+    ? await autoUpdate({ force, onStart: v => toast(`Updating Creator Scout to ${v}…`) })
+    : await checkForUpdate(force);
+  if (u.installing) return;
+  const b = $('update-btn');
+  b.classList.toggle('hidden', !u.available);
+  if (u.available) b.textContent = `Update to ${u.latest}`;
+}
+$('update-btn').addEventListener('click', () => chrome.tabs.create({ url: chrome.runtime.getURL('update.html?go=1') }));
+updateCheck({ force: true });
+setInterval(() => updateCheck({ install: document.hidden }), 15 * 60 * 1000);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) updateCheck({ install: false }); });
+takeJustUpdated().then(u => { if (u) setTimeout(() => toast(`Creator Scout updated to ${u.to}`), 600); });

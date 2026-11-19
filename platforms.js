@@ -6,12 +6,14 @@
 
 function sendToMaster(saved) {
   if (typeof MASTER_WEBHOOK_URL === 'undefined' || !MASTER_WEBHOOK_URL) return;
-  const { thumb, avatar, id, exportedAt, pending, ...payload } = saved;
+  const { thumb, avatar, id, exportedAt, pending, synced, localOnly, ...payload } = saved;
+  // "ip" is kept as a copy of brand so the existing Make.com mapping keeps working
+  const body = JSON.stringify({ ...payload, ip: saved.brand || '', festive: (saved.festive || []).join(', ') });
   fetch(MASTER_WEBHOOK_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    // "ip" is kept as a copy of brand so the existing Make.com mapping keeps working
-    body: JSON.stringify({ ...payload, ip: saved.brand || '', festive: (saved.festive || []).join(', ') })
+    body,
+    keepalive: body.length < 60000   // still arrives if the popup closes right after saving
   }).catch(err => console.log('Master DB silent fail:', err));
 }
 

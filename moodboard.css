@@ -658,3 +658,32 @@ body.fit .counter { margin-top: 6px; }
 body.fit.in-brand .hero { padding-top: clamp(8px, 3vh, 36px); }
 body.fit.in-brand .back { top: 4px; }
 .controls-row .filters:empty { display: none; }
+
+/* update available */
+.update-btn { color: var(--acid); border-color: rgba(166, 255, 61, 0.55); background: rgba(166, 255, 61, 0.07); box-shadow: 0 0 14px -5px var(--acid-glow); }
+.update-btn:hover { background: rgba(166, 255, 61, 0.15); color: var(--acid); }
+
+/* card image: saved at the card's shape, so it fills the card */
+.layer .logo-cover img.full { width: 100%; height: 100%; max-width: none; max-height: none; object-fit: contain; }
+.logo-cover canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.preview-card { width: 190px; height: 251px; }
+.preview-card.can-frame { cursor: grab; touch-action: none; }
+.preview-card.can-frame.framing { cursor: grabbing; }
+.preview-card.can-frame .cap { pointer-events: none; }
+
+/* resize controls */
+.crop { display: flex; flex-direction: column; gap: 9px; margin-top: 4px; }
+.zoom-row { display: flex; align-items: center; gap: 8px; }
+.zoom-step {
+  width: 26px; height: 26px; flex-shrink: 0; border-radius: 50%; border: 1px solid var(--line-strong);
+  background: none; color: var(--text); font-size: 15px; line-height: 1; cursor: pointer; display: grid; place-items: center;
+}
+.zoom-step:hover { border-color: rgba(166, 255, 61, 0.55); }
+#bm-zoom { flex: 1; accent-color: var(--acid); cursor: pointer; }
+.crop-presets { display: flex; flex-wrap: wrap; gap: 6px; }
+.crop-presets button {
+  border: 1px solid var(--line); border-radius: 999px; padding: 5px 11px; background: none;
+  color: var(--dim); font: inherit; font-size: 12px; cursor: pointer;
+}
+.crop-presets button:hover { color: var(--text); border-color: var(--line-strong); }
+.crop-presets button.on { color: var(--text); border-color: rgba(166, 255, 61, 0.6); background: rgba(166, 255, 61, 0.08); }

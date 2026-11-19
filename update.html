@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Update · Creator Scout</title>
+  <link rel="icon" href="icons/icon32.png">
+  <link rel="stylesheet" href="fonts/fonts.css">
+  <link rel="stylesheet" href="update.css">
+</head>
+<body>
+  <main class="wrap">
+    <a class="mark" href="moodboard.html">
+      <svg class="logo-mark" viewBox="0 0 32 32" fill="none" aria-hidden="true"><rect x="3.6" y="9.5" width="8" height="14" rx="2" transform="rotate(-16 7.6 16.5)" fill="#EDEDED" fill-opacity="0.5"/><rect x="20.4" y="9.5" width="8" height="14" rx="2" transform="rotate(16 24.4 16.5)" fill="#EDEDED" fill-opacity="0.5"/><rect x="10.75" y="5.5" width="10.5" height="19" rx="2.6" fill="#A6FF3D"/><path d="M14.4 11.6 L19.2 15 L14.4 18.4 Z" fill="#000"/></svg>
+      Creator Scout
+    </a>
+
+    <h1 id="title" class="title">Checking for updates…</h1>
+    <p id="versions" class="versions"></p>
+
+    <section id="notes" class="notes hidden">
+      <p class="label">What's new</p>
+      <ul id="notes-list"></ul>
+    </section>
+
+    <section id="actions" class="actions hidden">
+      <button id="update-btn" class="glow-pill primary">Update now</button>
+      <p id="folder-line" class="folder-line"></p>
+    </section>
+
+    <section id="first-time" class="first-time hidden">
+      <p class="label">First time only</p>
+      <p>Chrome will ask you to pick your <b>Creator Scout folder</b>: the folder you chose with “Load unpacked”. Then allow Creator Scout to edit files in it.</p>
+      <p>If Chrome offers <b>Allow on every visit</b>, choose it: later updates then install by themselves.</p>
+      <p class="hint">Not sure which folder? Open <b>chrome://extensions</b> and look under Creator Scout: it says where it was loaded from.</p>
+    </section>
+
+    <ol id="steps" class="steps hidden"></ol>
+    <p id="error" class="error hidden"></p>
+
+    <label class="auto">
+      <input type="checkbox" id="auto-toggle">
+      <span class="switch" aria-hidden="true"></span>
+      <span><b>Automatic updates</b><span id="auto-state" class="auto-state"></span></span>
+    </label>
+
+    <section id="fallback" class="fallback hidden">
+      <p class="label">Or update by hand</p>
+      <p>Download the zip, unzip it, copy everything inside over your Creator Scout folder (replace the files), then press <b>Reload</b> on Creator Scout in chrome://extensions.</p>
+      <a id="zip-link" class="ghost" href="#" target="_blank" rel="noopener">Download the zip</a>
+    </section>
+  </main>
+
+  <script src="config.js"></script>
+  <script src="updater.js"></script>
+  <script src="update.js"></script>
+</body>
+</html>

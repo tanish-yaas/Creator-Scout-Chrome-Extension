@@ -15,3 +15,7 @@ const TEAM_KEY = 'yaas-scout-NLV9kZdgyrcJlfStZZly7Ybl';
 // Set to true only if the web app is deployed with "Who has access: Anyone within <your company>".
 // Everyone then needs to be signed in to Chrome / Google with their company account.
 const TEAM_DOMAIN_ONLY = false;
+
+// Where updates come from: the extension checks this GitHub repo for a newer manifest version
+const UPDATE_REPO = 'tanish-yaas/Creator-Scout-Chrome-Extension';
+const UPDATE_BRANCH = 'main';

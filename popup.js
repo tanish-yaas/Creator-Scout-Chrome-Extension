@@ -16,11 +16,14 @@ const igOnlyRows = document.querySelectorAll('.ig-only');
 const ytOnlyRows = document.querySelectorAll('.yt-only');
 
 let currentPlatform = 'Instagram';
+// Regular mode saves to your sheet; moodboard mode also files the save on the team moodboard.
+// The popup always opens in regular mode.
+let boardMode = false;
 let current = null;          // { creator, content } from the last fetch
 let taxonomy = { brands: {}, festive: [] };
 let selectedFestive = [];
 let festiveExpanded = false;
-const FESTIVE_VISIBLE = 4;
+const FESTIVE_VISIBLE = 3;
 
 // ---------- status ----------
 
@@ -42,6 +45,23 @@ function fail(text) {
   showStatus(text, 'error-text');
   setDot('');
 }
+
+// ---------- mode ----------
+
+function saveLabel() {
+  if (boardMode) return 'Add to moodboard';
+  return 'Save to sheet';
+}
+function setMode(on) {
+  boardMode = on;
+  document.body.classList.toggle('mb-mode', on);
+  $('mode-btn').setAttribute('aria-checked', String(on));
+  $('moodboard-fields').classList.toggle('hidden', !(on && current));
+  $('mb-brand').placeholder = on ? 'Pick a brand' : 'e.g. Nykaa';
+  sendBtn.innerText = saveLabel();
+  showStatus(on ? 'Moodboard mode: saves go to the team moodboard.' : 'Regular mode: saves go to your sheet.', on ? 'mode-text' : '');
+}
+$('mode-btn').addEventListener('click', () => setMode(!boardMode));
 
 $('open-moodboard').addEventListener('click', () => {
   chrome.tabs.create({ url: chrome.runtime.getURL('moodboard.html') });
@@ -89,6 +109,15 @@ async function init() {
   renderFestiveChips();
   updateSavedCount();
   renderTeamState();
+
+  // New version on GitHub: show the update bar (the icon also shows NEW)
+  takeJustUpdated().then(u => { if (u) showStatus(`Updated to ${u.to}.`, 'success-text'); });
+  checkForUpdate().then(u => {
+    if (!u.available) return;
+    $('update-text').textContent = `Creator Scout ${u.latest} is ready`;
+    $('update-bar').classList.remove('hidden');
+  });
+  $('update-bar').addEventListener('click', () => chrome.tabs.create({ url: chrome.runtime.getURL('update.html?go=1') }));
 
   // Refresh brands and counts from the team board in the background
   pullTeam().then(async () => {
@@ -362,12 +391,11 @@ function updateUI({ creator, content }) {
     if (content.likes) bits.push(formatCount(content.likes) + ' likes');
     if (content.postedAt) bits.push(content.postedAt);
     $('prev-content-stats').innerText = bits.join('  ·  ');
-    sendBtn.innerText = 'Save to moodboard';
   } else {
     box.classList.add('hidden');
-    sendBtn.innerText = 'Save creator';
   }
-  $('moodboard-fields').classList.remove('hidden');
+  sendBtn.innerText = saveLabel();
+  $('moodboard-fields').classList.toggle('hidden', !boardMode);
 }
 
 let fetching = false;
@@ -405,12 +433,16 @@ async function doFetch() {
     showStatus(current.content ? 'Content fetched. Tag it and save.' : 'Profile fetched.', 'success-text');
     setDot('');
 
-    // Save a permanent copy of the thumbnail in the background
-    if (current.content && current.content.thumbUrl) {
-      const ref = current;
-      thumbToDataUrl(current.content.thumbUrl).then(d => {
-        if (current === ref) { ref.content.thumb = d; $('prev-thumb').src = d; }
+    // Make permanent copies of the thumbnail and profile picture now, so Save doesn't wait for them
+    const ref = current;
+    if (ref.content && ref.content.thumbUrl) {
+      ref.thumbReady = thumbToDataUrl(ref.content.thumbUrl).then(d => {
+        ref.content.thumb = d;
+        if (current === ref) $('prev-thumb').src = d;
       });
+    }
+    if (ref.creator.avatarUrl) {
+      ref.avatarReady = thumbToDataUrl(ref.creator.avatarUrl, 240).then(d => { ref.creator.avatar = d; });
     }
   } catch (e) {
     fail('Fetch failed (' + (e && e.message || 'unknown error') + '). Check your connection and try again.');
@@ -425,12 +457,16 @@ sendBtn.addEventListener('click', async () => {
   const type = typeSelect.value === 'Others' ? customTypeInput.value.trim() : typeSelect.value;
 
   const brand = brandInput.value.trim();
-  const niche = nicheInput.value.trim();
+  const niche = boardMode ? nicheInput.value.trim() : '';
+  if (boardMode && !brand) {
+    brandInput.focus();
+    return fail('Pick a brand so the moodboard knows where to file this.');
+  }
 
-  // Make sure permanent copies of the thumbnail / profile picture are ready before saving
-  sendBtn.innerText = 'Saving...';
-  if (content && !content.thumb && content.thumbUrl) content.thumb = await thumbToDataUrl(content.thumbUrl);
-  if (creator.avatarUrl && !creator.avatar) creator.avatar = await thumbToDataUrl(creator.avatarUrl, 240);
+  // The image copies started when the page was fetched; give them a moment, never more than ~1.5 s
+  sendBtn.innerText = 'Saving…';
+  const ready = Promise.all([current.thumbReady, current.avatarReady].filter(Boolean));
+  await Promise.race([ready, new Promise(r => setTimeout(r, 1500))]);
 
   const record = {
     platform: creator.platform,
@@ -455,28 +491,29 @@ sendBtn.addEventListener('click', async () => {
     postedAt: content ? content.postedAt : '',
     brand,
     niche,
-    festive: selectedFestive.slice(),
+    festive: boardMode ? selectedFestive.slice() : [],
     savedBy
   };
 
   sendBtn.innerText = 'Saving...';
   try {
-    const { record: saved, updated, offline } = await upsertRecord(record);
+    const toBoard = boardMode;
+    const { record: saved, updated, offline } = toBoard ? await saveToBoard(record) : await saveToSheet(record);
     taxonomy = await getTaxonomy();
 
-    // Master database (Make.com) — same webhook and fields as before
+    // Master database (Make.com) — same webhook and fields as before, in both modes
     sendToMaster(saved);
 
-    showStatus(offline ? 'Saved on this browser. It uploads to the team board once it can connect.'
-      : updated ? 'Already saved, so the row was updated.'
-      : brand ? `Saved to ${brand} on the moodboard and the sheet.` : 'Saved to the sheet and the moodboard.', 'success-text');
+    showStatus(toBoard ? (updated ? `Updated on the ${brand} moodboard.` : `Added to the ${brand} moodboard and your sheet.`)
+      : saved.synced ? 'Already on the moodboard, so that row was refreshed.'
+      : updated ? 'Already in your sheet, so the row was updated.' : 'Saved to your sheet.', 'success-text');
     renderTeamState();
     setDot('green');
     updateSavedCount();
   } catch (e) {
     fail('Couldn\'t save. ' + (e.message || ''));
   } finally {
-    sendBtn.innerText = content ? 'Save to moodboard' : 'Save creator';
+    sendBtn.innerText = saveLabel();
   }
 });
 

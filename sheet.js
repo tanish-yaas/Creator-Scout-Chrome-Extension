@@ -531,6 +531,10 @@ function toast(msg) {
 
 load();
 startTeamSync();
+
+// New version on GitHub + folder already allowed = install quietly (the sheet reopens after the restart)
+autoUpdate({ onStart: v => toast(`Updating Creator Scout to ${v}…`) });
+takeJustUpdated().then(u => { if (u) setTimeout(() => toast(`Creator Scout updated to ${u.to}`), 600); });
 getTeamInfo().then(info => {
   if (teamOn() && info.sheetUrl) {
     $('open-team-sheet').classList.remove('hidden');

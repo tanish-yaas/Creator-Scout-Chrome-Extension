@@ -15,6 +15,7 @@
       <span id="sync-state" class="sync-state"></span>
     </div>
     <div class="top-actions">
+      <button id="update-btn" class="ghost-btn update-btn hidden" title="A new version of Creator Scout is ready">Update available</button>
       <button id="new-brand" class="ghost-btn">New brand</button>
       <a class="ghost-btn" href="sheet.html">Open sheet</a>
       <div class="pop-anchor">
@@ -88,17 +89,30 @@
     <form id="bm-form" class="modal-box">
       <h2 id="bm-title" class="modal-title">Edit card</h2>
       <div class="bm-body">
-        <div class="bm-preview"><div id="bm-card" class="card preview-card active"></div></div>
+        <div class="bm-preview"><div id="bm-card" class="card preview-card active" tabindex="0" aria-label="Card preview. Drag or use the arrow keys to move the image."></div></div>
         <div class="bm-fields">
           <label class="fld">Brand name
             <input id="bm-name" type="text" autocomplete="off" placeholder="e.g. Nykaa">
           </label>
           <div class="fld">Logo
             <div class="logo-row">
-              <label class="ghost-btn file-btn">Upload logo<input id="bm-logo" type="file" accept="image/*" hidden></label>
-              <button type="button" id="bm-logo-clear" class="link-btn">Remove logo</button>
+              <label class="ghost-btn file-btn">Upload image<input id="bm-logo" type="file" accept="image/*" hidden></label>
+              <button type="button" id="bm-logo-clear" class="link-btn">Remove</button>
             </div>
-            <span class="hint">PNG with a transparent background looks best.</span>
+            <div id="bm-crop" class="crop hidden">
+              <div class="zoom-row">
+                <button type="button" class="zoom-step" data-step="-1" aria-label="Zoom out">−</button>
+                <input id="bm-zoom" type="range" min="0" max="1000" step="1" aria-label="Image size">
+                <button type="button" class="zoom-step" data-step="1" aria-label="Zoom in">+</button>
+              </div>
+              <div class="crop-presets">
+                <button type="button" data-preset="logo">Logo size</button>
+                <button type="button" data-preset="fit">Whole image</button>
+                <button type="button" data-preset="fill">Fill card</button>
+              </div>
+              <span class="hint">Drag the image on the card to move it. Scroll on the card to zoom.</span>
+            </div>
+            <span id="bm-logo-hint" class="hint">A logo PNG with a transparent background, or any photo.</span>
           </div>
           <div class="fld">Card colour
             <div id="bm-swatches" class="swatches"></div>
@@ -149,6 +163,7 @@
   <div id="toast" class="toast" role="status"></div>
 
   <script src="config.js"></script>
+  <script src="updater.js"></script>
   <script src="db.js"></script>
   <script src="platforms.js"></script>
   <script src="moodboard.js"></script>

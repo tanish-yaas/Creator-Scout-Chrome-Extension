@@ -347,8 +347,11 @@ function cardStyle(color) {
 }
 
 // Drive thumbnails come in any width: ask for one that suits where the image is shown
+// Drive images are fetched straight from Google's image host: no redirect, any width, and it allows
+// colour reading from any page (the client link too, which can't read drive.google.com links).
 function sized(url, w) {
-  return /drive\.google\.com\/thumbnail/.test(url || '') ? url.replace(/([?&])sz=w\d+/, `$1sz=w${w}`) : url;
+  const m = String(url || '').match(/drive\.google\.com\/thumbnail\?(?:[^#]*&)?id=([\w-]+)/);
+  return m ? `https://lh3.googleusercontent.com/d/${m[1]}=w${w}` : url;
 }
 
 // Brand cover: logo on the card colour, else the initial on the colour, else a mosaic of the brand's reels

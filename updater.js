@@ -18,7 +18,11 @@ function updateUrls() {
   const branch = typeof UPDATE_BRANCH !== 'undefined' ? UPDATE_BRANCH : 'main';
   return {
     repo,
+    // GitHub's API answers with the newest file straight away; raw.githubusercontent.com can lag ~5 minutes
+    manifestApi: `https://api.github.com/repos/${repo}/contents/manifest.json?ref=${branch}`,
     manifest: `https://raw.githubusercontent.com/${repo}/${branch}/manifest.json`,
+    head: `https://api.github.com/repos/${repo}/commits/${branch}`,
+    zipAt: sha => `https://codeload.github.com/${repo}/zip/${sha}`,
     zip: `https://codeload.github.com/${repo}/zip/refs/heads/${branch}`,
     commits: `https://api.github.com/repos/${repo}/commits?sha=${branch}&per_page=8`,
     page: `https://github.com/${repo}`
@@ -44,9 +48,16 @@ async function checkForUpdate(force = false) {
     return { current, latest: saved.latest, available: newerVersion(saved.latest, current) };
   }
   try {
-    const res = await fetch(urls.manifest + '?t=' + Date.now(), { cache: 'no-store', credentials: 'omit' });
-    if (!res.ok) throw new Error('GitHub answered ' + res.status);
-    const m = await res.json();
+    let m = null;
+    try {
+      const api = await fetch(urls.manifestApi, { cache: 'no-store', credentials: 'omit', headers: { Accept: 'application/vnd.github.raw+json' } });
+      if (api.ok) m = await api.json();
+    } catch (e) { /* fall back to the raw file */ }
+    if (!m) {
+      const res = await fetch(urls.manifest + '?t=' + Date.now(), { cache: 'no-store', credentials: 'omit' });
+      if (!res.ok) throw new Error('GitHub answered ' + res.status);
+      m = await res.json();
+    }
     const latest = String(m.version || current);
     await chromeSet({ [UPDATE_KEY]: { checkedAt: Date.now(), latest } });
     return { current, latest, available: newerVersion(latest, current) };
@@ -168,7 +179,14 @@ async function installUpdate(dir, step = () => {}) {
   await checkFolder(dir);
 
   step('Downloading the new version from GitHub');
-  const res = await fetch(updateUrls().zip + '?t=' + Date.now(), { cache: 'no-store', credentials: 'omit' });
+  // Download the exact latest commit, so a cached copy of the branch can't hand over an older version
+  const urls = updateUrls();
+  let zipUrl = urls.zip + '?t=' + Date.now();
+  try {
+    const h = await fetch(urls.head, { cache: 'no-store', credentials: 'omit' });
+    if (h.ok) { const c = await h.json(); if (c && c.sha) zipUrl = urls.zipAt(c.sha); }
+  } catch (e) { /* use the branch download */ }
+  const res = await fetch(zipUrl, { cache: 'no-store', credentials: 'omit' });
   if (!res.ok) throw new Error('GitHub didn\'t send the update (' + res.status + '). Check your connection and try again.');
   const files = extensionFiles(await unzip(await res.arrayBuffer()));
 

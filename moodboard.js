@@ -470,7 +470,8 @@ function applyGlows(root) {
     while (queue.length && run === glowRun) {
       const { el, item, src } = queue.shift();
       const colour = (await coverColor(src)) || DEFAULT_GLOW;
-      if (run !== glowRun || S.items[+el.dataset.i] !== item) continue;
+      // the list is rebuilt on every redraw, so compare by key rather than by object
+      if (run !== glowRun || !S.items[+el.dataset.i] || S.items[+el.dataset.i].key !== item.key) continue;
       el.style.setProperty('--glow', colour);
       if (el.classList.contains('active')) setHalo(colour);
     }

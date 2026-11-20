@@ -888,6 +888,14 @@ $('add-links-btn').addEventListener('click', () => {
   }
 });
 
+// Adds a tag to the shared list (if it's new) and returns its exact name
+async function addCustomTag(name) {
+  const tax = await registerTaxonomy({ festive: [name] });
+  if (teamOn()) await saveFestiveList(tax.festive);
+  S.taxonomy = await getTaxonomy();
+  return (tax.festive.find(f => f.name.toLowerCase() === name.toLowerCase()) || { name }).name;
+}
+
 // Campaign types to put on everything added in one go
 function renderLinkTags() {
   const all = S.taxonomy.festive || [];
@@ -895,7 +903,17 @@ function renderLinkTags() {
   const ordered = [...all.filter(f => on.has(f.name)), ...all.filter(f => !on.has(f.name))];
   const shown = S.linkTagsOpen ? ordered : ordered.slice(0, Math.max(6, on.size));
   $('links-tags').innerHTML = shown.map(f => `<button type="button" class="chip ${on.has(f.name) ? 'on' : ''}" data-lt="${esc(f.name)}" style="--c:${f.color}">${f.emoji} ${esc(f.name)}</button>`).join('')
-    + (ordered.length > 6 ? `<button type="button" class="chip more" data-lt-more>${S.linkTagsOpen ? 'Show less' : '+' + (ordered.length - shown.length) + ' more'}</button>` : '');
+    + (ordered.length > 6 ? `<button type="button" class="chip more" data-lt-more>${S.linkTagsOpen ? 'Show less' : '+' + (ordered.length - shown.length) + ' more'}</button>` : '')
+    + `<input class="chip-input" id="lt-new" placeholder="+ Add your own tag" aria-label="Add your own tag" autocomplete="off">`;
+  $('lt-new').addEventListener('keydown', async e => {
+    if (e.key !== 'Enter') return;
+    e.preventDefault();
+    const name = e.target.value.trim();
+    if (!name) return;
+    try { S.linkTags.add(await addCustomTag(name)); } catch (err) { toast('Couldn\'t add the tag: ' + err.message); }
+    renderLinkTags();
+    $('lt-new').focus();
+  });
 }
 $('links-tags').addEventListener('click', e => {
   const b = e.target.closest('[data-lt]');
@@ -1014,6 +1032,7 @@ function renderPlayerSide() {
     <div class="chips">${chipList(r).map(f => `
       <button class="chip ${(r.festive || []).includes(f.name) ? 'on' : ''}" data-f="${esc(f.name)}" style="--c:${f.color}" title="${esc(f.name)}">${f.emoji} ${esc(f.name)}</button>`).join('')}
       ${S.taxonomy.festive.length > 5 ? `<button class="chip more" id="e-more">${S.chipsOpen ? 'Show less' : '+' + (S.taxonomy.festive.length - chipList(r).length) + ' more'}</button>` : ''}
+      <input class="chip-input" id="e-newtag" placeholder="+ Add your own tag" aria-label="Add your own tag" autocomplete="off">
     </div>
 
     <div class="pl-links">
@@ -1041,6 +1060,24 @@ function renderPlayerSide() {
     catch (err) { toast('Couldn\'t save: ' + err.message); load(); }
   }));
   if ($('e-more')) $('e-more').addEventListener('click', () => { S.chipsOpen = !S.chipsOpen; renderPlayerSide(); });
+  // Your own tag: added to the team's tag list and put on this reel
+  $('e-newtag').addEventListener('keydown', async e => {
+    if (e.key !== 'Enter') return;
+    e.preventDefault();
+    const name = e.target.value.trim();
+    if (!name) return;
+    e.target.disabled = true;
+    try {
+      const tag = await addCustomTag(name);
+      const cur = r.festive || [];
+      if (!cur.includes(tag)) await updateRecord(r.id, { festive: [...cur, tag] });
+      toast(`Tagged ${tag}`);
+    } catch (err) { toast('Couldn\'t add the tag: ' + err.message); }
+    S.taxonomy = await getTaxonomy();
+    e.target.value = '';
+    e.target.blur();
+    renderPlayerSide();
+  });
   $('e-remove').addEventListener('click', () => deleteReel(r.id));
 }
 

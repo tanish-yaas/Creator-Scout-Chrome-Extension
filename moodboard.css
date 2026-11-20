@@ -783,3 +783,11 @@ select.cell-in option { background: #0b0b0b; }
 
 /* no empty gap where the home subtitle used to be */
 .sub:empty { display: none; }
+
+/* type your own tag */
+.chip-input {
+  width: 150px; background: transparent; color: var(--text); font: inherit; font-size: 12.5px;
+  border: 1px dashed var(--line-strong); border-radius: 999px; padding: 5px 12px;
+}
+.chip-input::placeholder { color: var(--dim); }
+.chip-input:focus { outline: none; border-style: solid; border-color: rgba(166, 255, 61, 0.55); }

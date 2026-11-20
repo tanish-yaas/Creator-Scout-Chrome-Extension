@@ -45,7 +45,7 @@ let renderQueued = false;
 const isEditing = () => {
   if (!$('player').classList.contains('hidden')) return true;
   const a = document.activeElement;
-  return a && a.matches('input, textarea, select') && (a.closest('#info') || a.closest('.modal') || a.closest('#add-links'));
+  return a && a.matches('input, textarea, select') && (a.closest('#info') || a.closest('.modal') || a.closest('#add-links') || a.closest('#creators'));
 };
 
 async function load() {
@@ -851,15 +851,16 @@ function renderCreators() {
           </div></td>
           <td class="num">${c.followers ? Number(c.followers).toLocaleString('en-IN') : '--'}</td>
           <td>${tier.class ? `<span class="tier ${tier.class}">${tier.name}</span>` : '--'}</td>
-          <td>${esc(c.category || '--')}</td>
-          <td>${esc(c.type || '--')}</td>
-          <td>${esc([...c.niches].join(', ') || '--')}</td>
+          ${editCell('category', c, c.category)}
+          ${editCell('type', c, c.type)}
+          ${editCell('niche', c, [...c.niches].join(', '))}
           <td class="num">${c.reels}</td>
           ${SHARE ? '' : `<td>${esc([...c.savedBy].join(', ') || '--')}</td>`}
           <td class="row-acts">${c.url ? `<a href="${esc(c.url)}" target="_blank" rel="noopener">Profile ↗</a>` : ''}${SHARE ? '' : `<button class="c-del" data-user="${esc(c.platform + ':' + c.username)}" title="Remove ${esc(handleOf(c))} from ${esc(brandLabel(S.brand))}" aria-label="Remove ${esc(handleOf(c))}">×</button>`}</td>
         </tr>`;
       }).join('')}</tbody>
     </table></div>`;
+  $('creators').querySelectorAll('td.ed').forEach(td => td.addEventListener('click', () => openCellEditor(td)));
   $('creators').querySelectorAll('.c-del').forEach(b => b.addEventListener('click', () => removeCreator(b.dataset.user)));
   $('creators').querySelectorAll('.ava img').forEach(img => img.addEventListener('error', () => img.remove(), { once: true }));
   if ($('copy-creators')) $('copy-creators').addEventListener('click', async () => {
@@ -881,8 +882,34 @@ $('add-links-btn').addEventListener('click', () => {
     $('links-niches').innerHTML = (S.taxonomy.brands[S.brand] || []).map(n => `<option value="${esc(n)}">`).join('');
     const one = S.niches.size === 1 ? [...S.niches][0] : '';
     $('links-niche').value = one && one !== NO_NICHE ? one : '';
+    S.linkTags = new Set(S.festive);
+    S.linkTagsOpen = false;
+    renderLinkTags();
     $('links-input').focus();
   }
+});
+
+// Campaign types to put on everything added in one go
+function renderLinkTags() {
+  const all = S.taxonomy.festive || [];
+  const on = S.linkTags || new Set();
+  const ordered = [...all.filter(f => on.has(f.name)), ...all.filter(f => !on.has(f.name))];
+  const shown = S.linkTagsOpen ? ordered : ordered.slice(0, Math.max(6, on.size));
+  $('links-tags').innerHTML = shown.map(f => `<button type="button" class="chip ${on.has(f.name) ? 'on' : ''}" data-lt="${esc(f.name)}" style="--c:${f.color}">${f.emoji} ${esc(f.name)}</button>`).join('')
+    + (ordered.length > 6 ? `<button type="button" class="chip more" data-lt-more>${S.linkTagsOpen ? 'Show less' : '+' + (ordered.length - shown.length) + ' more'}</button>` : '');
+}
+$('links-tags').addEventListener('click', e => {
+  const b = e.target.closest('[data-lt]');
+  if (b) { const n = b.dataset.lt; S.linkTags.has(n) ? S.linkTags.delete(n) : S.linkTags.add(n); renderLinkTags(); return; }
+  if (e.target.closest('[data-lt-more]')) { S.linkTagsOpen = !S.linkTagsOpen; renderLinkTags(); }
+});
+
+// Click anywhere outside the box to fold it away (not while links are still being added)
+document.addEventListener('pointerdown', e => {
+  const f = $('add-links');
+  if (f.classList.contains('hidden') || $('links-submit').disabled) return;
+  if (e.target.closest('#add-links, #add-links-btn, .modal')) return;
+  f.classList.add('hidden');
 });
 
 $('add-links').addEventListener('submit', async e => {
@@ -914,7 +941,7 @@ $('add-links').addEventListener('submit', async e => {
         contentUrl: content.url || '', contentKind: content.kind || '', thumb, thumbUrl: content.thumbUrl || (profileOnly ? creator.avatarUrl || '' : ''), avatar,
         caption: content.caption || '', contentViews: content.views || 0, contentLikes: content.likes || 0,
         contentComments: content.comments || 0, postedAt: content.postedAt || '',
-        brand, niche, festive: [], savedBy
+        brand, niche, festive: [...(S.linkTags || [])], savedBy
       });
       sendToMaster(record);
       done++;
@@ -1360,6 +1387,74 @@ async function deleteReel(id) {
     if (S.playerId === id) closePlayer();
     toast('Reel deleted');
   } catch (err) { toast('Couldn\'t delete: ' + err.message); }
+}
+
+// ---------- editing Category / Type / Niche in the creators list ----------
+// Each cell opens a dropdown; the value is saved on every row of that creator in this brand.
+
+const CREATOR_TYPES = ['Beauty', 'Business & Finance', 'Cinematographer / Photographer', 'Comedy & Memes', 'Dance', 'Education', 'Fashion', 'Fitness', 'Food', 'Gaming', 'Lifestyle & Vlogs', 'Motivation & Self-help', 'Music', 'News & Commentary', 'Tech & Gadgets', 'Travel'];
+
+function editCell(field, c, value) {
+  const shown = value && value !== '--' && value !== 'None' ? value : '';
+  if (SHARE) return `<td>${esc(shown || '--')}</td>`;
+  return `<td class="ed" data-k="${field}" data-user="${esc(c.platform + ':' + c.username)}" data-v="${esc(shown)}" title="Click to edit"><span class="ed-v">${esc(shown || '--')}</span><span class="ed-caret" aria-hidden="true">▾</span></td>`;
+}
+
+function rowsOfCreator(key) {
+  const [platform, ...rest] = key.split(':');
+  const user = rest.join(':').toLowerCase().replace(/^@/, '');
+  return brandRecords().filter(r => r.platform === platform && String(r.username).toLowerCase().replace(/^@/, '') === user);
+}
+
+function openCellEditor(td) {
+  if (td.querySelector('.cell-in')) return;
+  const field = td.dataset.k;
+  const cur = field === 'niche' ? (td.dataset.v.split(', ')[0] || '') : td.dataset.v;
+  let html;
+  if (field === 'type') {
+    const opts = CREATOR_TYPES.includes(cur) || !cur ? CREATOR_TYPES : [cur, ...CREATOR_TYPES];
+    html = `<select class="cell-in"><option value="">--</option>${opts.map(t => `<option value="${esc(t)}" ${t === cur ? 'selected' : ''}>${esc(t)}</option>`).join('')}<option value="__other">Other…</option></select>`;
+  } else {
+    const pool = field === 'niche'
+      ? (S.taxonomy.brands[S.brand] || [])
+      : [...new Set(S.records.map(r => r.category).filter(x => x && !['--', 'None'].includes(x)))].sort();
+    html = `<input class="cell-in" list="dl-${field}" value="${esc(cur)}" placeholder="${field === 'niche' ? 'Pick or type a niche' : 'Pick or type a category'}">
+      <datalist id="dl-${field}">${pool.map(o => `<option value="${esc(o)}">`).join('')}</datalist>`;
+  }
+  td.innerHTML = html;
+  let closed = false;
+  const save = async v => {
+    if (closed) return;
+    closed = true;
+    v = String(v || '').trim();
+    if (v === cur) { renderCreators(); return; }
+    try {
+      for (const r of rowsOfCreator(td.dataset.user)) if ((r[field] || '') !== v) await updateRecord(r.id, { [field]: v });
+      toast('Saved');
+    } catch (err) { toast('Couldn\'t save: ' + err.message); }
+    renderCreators();
+  };
+  const cancel = () => { if (closed) return; closed = true; renderCreators(); };
+  const bind = el => {
+    el.focus();
+    el.addEventListener('keydown', e => {
+      if (e.key === 'Enter') { e.preventDefault(); save(el.value); }
+      if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); cancel(); }
+    });
+    if (el.tagName === 'SELECT') {
+      el.addEventListener('change', () => {
+        if (el.value !== '__other') return save(el.value);
+        // a type that isn't in the list: switch to a text box
+        td.innerHTML = '<input class="cell-in" placeholder="Type a creator type">';
+        bind(td.querySelector('.cell-in'));
+      });
+      el.addEventListener('blur', () => setTimeout(() => { if (td.contains(el) && el.value !== '__other') cancel(); }, 120));
+    } else {
+      el.select();
+      el.addEventListener('blur', () => save(el.value));
+    }
+  };
+  bind(td.querySelector('.cell-in'));
 }
 
 // Removes a creator from this brand: their profile row and any of their reels filed here

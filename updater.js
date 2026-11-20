@@ -14,8 +14,9 @@ const chromeSet = obj => new Promise(r => chrome.storage.local.set(obj, r));
 const chromeRemove = keys => new Promise(r => chrome.storage.local.remove(keys, r));
 
 function updateUrls() {
-  const repo = typeof UPDATE_REPO !== 'undefined' ? UPDATE_REPO : '';
-  const branch = typeof UPDATE_BRANCH !== 'undefined' ? UPDATE_BRANCH : 'main';
+  // Falls back to the team repo, so an older config.js without these lines still gets updates
+  const repo = (typeof UPDATE_REPO !== 'undefined' && UPDATE_REPO) || 'tanish-yaas/Creator-Scout-Chrome-Extension';
+  const branch = (typeof UPDATE_BRANCH !== 'undefined' && UPDATE_BRANCH) || 'main';
   return {
     repo,
     // GitHub's API answers with the newest file straight away; raw.githubusercontent.com can lag ~5 minutes

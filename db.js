@@ -593,7 +593,7 @@ async function saveFestiveList(list) {
 // ---------- client links ----------
 
 function shareUrl(token) {
-  const page = typeof SHARE_PAGE_URL !== 'undefined' && SHARE_PAGE_URL ? SHARE_PAGE_URL : '';
+  const page = typeof SHARE_PAGE_URL !== 'undefined' && SHARE_PAGE_URL ? SHARE_PAGE_URL : 'https://tanish-yaas.github.io/Creator-Scout-Chrome-Extension/moodboard.html';
   return token && page ? `${page}#share=${token}` : '';
 }
 

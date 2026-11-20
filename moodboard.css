@@ -829,3 +829,15 @@ body.fit .info { padding-bottom: 14px; }
   transition: background 0.5s ease;
 }
 @media (prefers-reduced-transparency: reduce) { .center-glow { opacity: 0.35; } }
+
+/* brand colour glowing softly behind the brand name */
+body.in-brand .title-row { position: relative; isolation: isolate; }
+body.in-brand .title-row.glowing::before {
+  content: ""; position: absolute; left: 50%; top: 50%; z-index: -1; pointer-events: none;
+  width: min(760px, 90vw); height: 190%;
+  transform: translate(-50%, -50%);
+  background: radial-gradient(ellipse at center, rgba(var(--brand-glow), 0.34), rgba(var(--brand-glow), 0.1) 45%, transparent 70%);
+  filter: blur(14px);
+  animation: title-glow-in 0.6s ease both;
+}
+@keyframes title-glow-in { from { opacity: 0; } to { opacity: 1; } }

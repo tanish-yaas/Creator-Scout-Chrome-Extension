@@ -125,13 +125,26 @@ async function igLookupContent(link) {
   // If Instagram didn't send a cover image, its public media link often still works
   const content = { kind, url: contentUrl, thumbUrl: igMeta(doc, 'og:image') || `https://www.instagram.com/p/${code}/media/?size=l`, caption: '', likes: 0, comments: 0, views: 0, postedAt: '' };
   let username = ci > 0 ? parts[0] : '';
-  const m = desc.match(/^([\d.,]+\s*[KMBkmb]?)\s+likes?,\s*([\d.,]+\s*[KMBkmb]?)\s+comments?\s*-\s*([\w.]+)\s+on\s+([^:]+?):\s*([\s\S]*)$/i);
+  const m = desc.match(/^([\d.,]+\s*[KMBkmb]?)\s+likes?,\s*([\d.,]+\s*[KMBkmb]?)\s+comments?\s*-\s*([\w.]+)\s+on\s+([^:]+?):\s*([\s\S]*)$/i)
+    // likes hidden or no comments: "user on March 6, 2026: caption" / "1,000 likes - user on …"
+    || desc.match(/^(?:([\d.,]+\s*[KMBkmb]?)\s+likes?\s*-\s*)?()([\w.]+)\s+on\s+([A-Z][a-z]+ \d{1,2}, \d{4}):\s*([\s\S]*)$/);
   if (m) {
-    content.likes = parseCount(m[1].replace(/\s/g, ''));
-    content.comments = parseCount(m[2].replace(/\s/g, ''));
+    if (m[1]) content.likes = parseCount(m[1].replace(/\s/g, ''));
+    if (m[2]) content.comments = parseCount(m[2].replace(/\s/g, ''));
     username = username || m[3];
-    content.postedAt = m[4].trim();
-    content.caption = m[5].replace(/^["“]|["”]\.?$/g, '').trim();
+    content.postedAt = (m[4] || '').trim();
+    content.caption = (m[5] || '').replace(/^["“]|["”]\.?$/g, '').trim();
+  }
+  // Other places Instagram puts the owner: the page's own link, the title, or the page data
+  if (!username) {
+    const own = (igMeta(doc, 'og:url') || ((doc && doc.querySelector('link[rel="canonical"]')) || {}).href || '').match(/instagram\.com\/([\w.]+)\/(?:p|reel|reels|tv)\//);
+    if (own) username = own[1];
+  }
+  if (!username) { const t = igMeta(doc, 'og:title').match(/\(@([\w.]+)\)/); if (t) username = t[1]; }
+  if (!username && doc) {
+    const html = doc.documentElement.innerHTML;
+    const j = html.match(/"owner"\s*:\s*\{[^{}]*?"username"\s*:\s*"([\w.]+)"/) || html.match(/"username"\s*:\s*"([\w.]+)"/);
+    if (j) username = j[1];
   }
   const creator = { platform: 'Instagram', username, name: '', followers: 0, url: username ? `https://www.instagram.com/${username}/` : '', avatarUrl: '' };
   if (username) Object.assign(creator, await igLookupProfile(username));

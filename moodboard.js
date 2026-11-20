@@ -48,8 +48,18 @@ const isEditing = () => {
   return a && a.matches('input, textarea, select') && (a.closest('#info') || a.closest('.modal') || a.closest('#add-links') || a.closest('#creators'));
 };
 
+// Several storage writes often land together (sync, upload, tags); redraw once for the lot
+let loadTimer = 0, freshRecords = null;
+function scheduleLoad(records) {
+  if (records) freshRecords = records;
+  if (loadTimer) return;
+  loadTimer = requestAnimationFrame(() => { loadTimer = 0; load(); });
+}
+
 async function load() {
-  const all = (await getRecords()).filter(onMoodboard).map(normalizeRecord);
+  const raw = freshRecords || await getRecords();
+  freshRecords = null;
+  const all = raw.filter(onMoodboard).map(normalizeRecord);
   S.records = all.sort((a, b) => (b.savedAt || 0) - (a.savedAt || 0));
   S.taxonomy = await getTaxonomy();
   S.taxonomy.meta = S.taxonomy.meta || {};
@@ -68,7 +78,8 @@ document.addEventListener('focusout', () => setTimeout(() => { if (renderQueued 
 
 chrome.storage.onChanged.addListener((changes, area) => {
   if (area !== 'local') return;
-  if (changes[SCOUT_KEYS.records] || changes[SCOUT_KEYS.taxonomy]) load();
+  if (changes[SCOUT_KEYS.records]) scheduleLoad(changes[SCOUT_KEYS.records].newValue || []);
+  else if (changes[SCOUT_KEYS.taxonomy]) scheduleLoad();
   if (changes.scoutTeamInfo) renderSyncState();
 });
 
@@ -197,14 +208,26 @@ function renderHero() {
 
 // The brand's logo as a rounded square next to its name: a card-shaped image is cropped to its
 // centre (where the logo sits), a plain logo is fitted inside; no logo shows the initial.
+// Soft glow behind the brand name in the brand's own colour (card colour, else its logo / reels)
+async function setTitleGlow(name) {
+  const row = document.querySelector('.title-row');
+  if (!name) { row.style.removeProperty('--brand-glow'); row.classList.remove('glowing'); return; }
+  const { rgb, src } = glowSource({ kind: 'brand', name, recs: brandRecordsFor(name) });
+  const colour = rgb || (src && (glowCache.get(glowKey(src)) || await coverColor(src))) || DEFAULT_GLOW;
+  if (S.brand !== name) return;
+  row.style.setProperty('--brand-glow', colour);
+  row.classList.add('glowing');
+}
+
 function renderBrandIcon(name) {
   const el = $('brand-icon');
-  if (!name) { el.classList.add('hidden'); el.dataset.key = ''; return; }
+  if (!name) { el.classList.add('hidden'); el.dataset.key = ''; setTitleGlow(null); return; }
   const meta = metaOf(name);
   const key = `${name}|${meta.logo || ''}|${meta.color || ''}`;
   el.classList.remove('hidden');
   if (el.dataset.key === key) return;
   el.dataset.key = key;
+  setTitleGlow(name);
   const size = el.style.getPropertyValue('--icon-size');
   el.style.cssText = cardStyle(meta.color);
   if (size) el.style.setProperty('--icon-size', size);
@@ -323,20 +346,25 @@ function cardStyle(color) {
   return color ? `--bc:${esc(color)};--ink:${inkFor(color)}` : '';
 }
 
+// Drive thumbnails come in any width: ask for one that suits where the image is shown
+function sized(url, w) {
+  return /drive\.google\.com\/thumbnail/.test(url || '') ? url.replace(/([?&])sz=w\d+/, `$1sz=w${w}`) : url;
+}
+
 // Brand cover: logo on the card colour, else the initial on the colour, else a mosaic of the brand's reels
 function coverHTML(item) {
   if (item.kind === 'brand') {
     const meta = metaOf(item.name);
     const initial = `<div class="logo-cover"><span class="initial">${esc(brandLabel(item.name).charAt(0).toUpperCase())}</span></div>`;
-    if (meta.logo) return `<div class="logo-cover"><img src="${esc(meta.logo)}" alt="" draggable="false" class="${framed.get(meta.logo) ? 'full' : ''}"></div>`;
+    if (meta.logo) return `<div class="logo-cover"><img src="${esc(sized(meta.logo, 640))}" data-src="${esc(meta.logo)}" alt="" draggable="false" decoding="async" class="${framed.get(meta.logo) ? 'full' : ''}"></div>`;
     if (meta.color) return initial;
     const thumbs = thumbsFor(item);
     if (!thumbs.length) return initial;
-    return (thumbs.length >= 4 ? thumbs : thumbs.slice(0, 1)).map(t => `<img src="${esc(t)}" alt="" draggable="false" loading="lazy">`).join('');
+    return (thumbs.length >= 4 ? thumbs : thumbs.slice(0, 1)).map(t => `<img src="${esc(sized(t, thumbs.length >= 4 ? 300 : 560))}" alt="" draggable="false" loading="lazy" decoding="async">`).join('');
   }
   const r = item.rec;
   return r.thumb
-    ? `<img src="${esc(r.thumb)}" alt="" draggable="false" loading="lazy">`
+    ? `<img src="${esc(sized(r.thumb, 560))}" alt="" draggable="false" loading="lazy" decoding="async">`
     : `<span class="ph">${esc(String(r.username || '?').replace(/^@/, '').charAt(0).toUpperCase() || '▶')}</span>`;
 }
 
@@ -365,7 +393,7 @@ async function coverColor(src) {
   if (glowCache.has(key)) return glowCache.get(key);
   let out = '';
   try {
-    const res = await fetch(src, { credentials: 'omit' });
+    const res = await fetch(sized(src, 120), { credentials: 'omit' });   // a small copy is plenty to read colours
     if (!res.ok) throw new Error('image ' + res.status);
     const blob = await res.blob();
     const bmp = await createImageBitmap(blob, { resizeWidth: 36, resizeHeight: 36, resizeQuality: 'low' });
@@ -419,16 +447,32 @@ function glowSource(item) {
 
 const DEFAULT_GLOW = '166, 255, 61';
 // Gives every card its own glow colour, then updates the stage halo for the card in the middle
+// Colours already known are applied at once; the rest are worked out nearest-to-the-middle first,
+// two at a time, so images on screen load before the background colour reading.
+let glowRun = 0;
 function applyGlows(root) {
-  root.querySelectorAll('.card[data-i]').forEach(async el => {
+  const run = ++glowRun;
+  const queue = [];
+  [...root.querySelectorAll('.card[data-i]')].forEach(el => {
     const item = S.items[+el.dataset.i];
     if (!item) return;
     const { rgb, src } = glowSource(item);
-    const colour = rgb || (await coverColor(src)) || DEFAULT_GLOW;
-    if (S.items[+el.dataset.i] !== item) return;
-    el.style.setProperty('--glow', colour);
-    if (el.classList.contains('active')) setHalo(colour);
+    const known = rgb || (src && glowCache.get(glowKey(src)));
+    if (known || !src) { el.style.setProperty('--glow', known || DEFAULT_GLOW); if (el.classList.contains('active')) setHalo(known || DEFAULT_GLOW); }
+    else queue.push({ el, item, src });
   });
+  const mid = S.index;
+  queue.sort((a, b) => Math.abs(+a.el.dataset.i - mid) - Math.abs(+b.el.dataset.i - mid));
+  const work = async () => {
+    while (queue.length && run === glowRun) {
+      const { el, item, src } = queue.shift();
+      const colour = (await coverColor(src)) || DEFAULT_GLOW;
+      if (run !== glowRun || S.items[+el.dataset.i] !== item) continue;
+      el.style.setProperty('--glow', colour);
+      if (el.classList.contains('active')) setHalo(colour);
+    }
+  };
+  work(); work();
 }
 function setHalo(rgb) {
   document.documentElement.style.setProperty('--halo', `rgb(${rgb || DEFAULT_GLOW})`);
@@ -765,7 +809,34 @@ function activate(item) {
   else openPlayer(S.index);
 }
 
+// Reels saved without their creator (Instagram didn't say who posted them) get looked up again
+const repairTried = new Set();
+let repairing = false;
+async function repairMissingCreators(name) {
+  if (SHARE || repairing) return;
+  const todo = S.records.filter(r => brandOf(r) === name && r.platform === 'Instagram' && r.contentUrl && !r.username && !repairTried.has(r.id));
+  if (!todo.length) return;
+  repairing = true;
+  let fixed = 0;
+  for (const r of todo) {
+    repairTried.add(r.id);
+    try {
+      const found = await lookupLink(r.contentUrl);
+      const c = found && found.creator;
+      if (!c || !c.username) continue;
+      const avatar = c.avatarUrl ? await thumbToDataUrl(c.avatarUrl, 240) : '';
+      const patch = { username: c.username, name: c.name || '', url: c.url || `https://www.instagram.com/${c.username}/`, followers: Number(c.followers) || 0, tier: calculateTier(Number(c.followers) || 0).name };
+      if (avatar.startsWith('data:')) patch.avatar = avatar;
+      await updateRecord(r.id, patch);
+      fixed++;
+    } catch (e) { /* try again next time the page opens */ }
+  }
+  repairing = false;
+  if (fixed) toast(`Filled in the creator on ${fixed} ${fixed === 1 ? 'reel' : 'reels'}`);
+}
+
 function openBrand(name) {
+  setTimeout(() => repairMissingCreators(name), 800);
   S.homeIndex = S.index;
   S.brand = name;
   S.tab = brandRecordsFor(name).some(isContent) ? 'reels' : 'creators';
@@ -872,7 +943,7 @@ function renderCreators() {
         const ini = String(c.username).replace(/^@/, '').charAt(0).toUpperCase();
         return `<tr>
           <td><div class="who">
-            <span class="ava">${c.avatar ? `<img src="${esc(c.avatar)}" alt="" loading="lazy">` : esc(ini)}</span>
+            <span class="ava">${c.avatar ? `<img src="${esc(sized(c.avatar, 96))}" alt="" loading="lazy" decoding="async">` : esc(ini)}</span>
             <span><b>${esc(handleOf(c))}</b>${c.name ? `<small>${esc(c.name)}</small>` : ''}</span>
           </div></td>
           <td class="num">${c.followers ? Number(c.followers).toLocaleString('en-IN') : '--'}</td>
@@ -1168,7 +1239,7 @@ document.addEventListener('load', e => {
   const img = e.target;
   if (!(img instanceof HTMLImageElement) || !img.closest('.logo-cover, .brand-icon')) return;
   const full = isFramedSize(img.naturalWidth, img.naturalHeight);
-  framed.set(img.getAttribute('src'), full);
+  framed.set(img.dataset.src || img.getAttribute('src'), full);
   img.classList.toggle('full', full);
 }, true);
 

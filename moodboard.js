@@ -856,10 +856,11 @@ function renderCreators() {
           <td>${esc([...c.niches].join(', ') || '--')}</td>
           <td class="num">${c.reels}</td>
           ${SHARE ? '' : `<td>${esc([...c.savedBy].join(', ') || '--')}</td>`}
-          <td>${c.url ? `<a href="${esc(c.url)}" target="_blank" rel="noopener">Profile ↗</a>` : ''}</td>
+          <td class="row-acts">${c.url ? `<a href="${esc(c.url)}" target="_blank" rel="noopener">Profile ↗</a>` : ''}${SHARE ? '' : `<button class="c-del" data-user="${esc(c.platform + ':' + c.username)}" title="Remove ${esc(handleOf(c))} from ${esc(brandLabel(S.brand))}" aria-label="Remove ${esc(handleOf(c))}">×</button>`}</td>
         </tr>`;
       }).join('')}</tbody>
     </table></div>`;
+  $('creators').querySelectorAll('.c-del').forEach(b => b.addEventListener('click', () => removeCreator(b.dataset.user)));
   $('creators').querySelectorAll('.ava img').forEach(img => img.addEventListener('error', () => img.remove(), { once: true }));
   if ($('copy-creators')) $('copy-creators').addEventListener('click', async () => {
     const head = ['Username', 'Name', 'Platform', 'Followers', 'Tier', 'Category', 'Type', 'Niches', 'Reels saved', 'Saved by', 'URL'];
@@ -1359,6 +1360,25 @@ async function deleteReel(id) {
     if (S.playerId === id) closePlayer();
     toast('Reel deleted');
   } catch (err) { toast('Couldn\'t delete: ' + err.message); }
+}
+
+// Removes a creator from this brand: their profile row and any of their reels filed here
+async function removeCreator(key) {
+  const [platform, ...rest] = key.split(':');
+  const user = rest.join(':').toLowerCase().replace(/^@/, '');
+  const rows = brandRecords().filter(r => r.platform === platform && String(r.username).toLowerCase().replace(/^@/, '') === user);
+  if (!rows.length) return;
+  const reels = rows.filter(isContent).length;
+  const ok = await confirmDialog({
+    title: `Remove ${handleOf(rows[0])}?`,
+    html: `<p>${esc(handleOf(rows[0]))} is removed from ${esc(brandLabel(S.brand))} for everyone${reels ? `, with ${reels} ${reels === 1 ? 'reel' : 'reels'}` : ''}. The master database isn't touched.</p>`,
+    okLabel: 'Remove'
+  });
+  if (!ok) return;
+  try {
+    for (const r of rows) await deleteRecord(r.id);
+    toast(`${handleOf(rows[0])} removed`);
+  } catch (err) { toast('Couldn\'t remove: ' + err.message); }
 }
 
 async function deleteBrand(name) {

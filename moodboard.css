@@ -771,3 +771,12 @@ body.in-brand .title-row .brand-icon.hidden + .title { grid-column: 2 / span 2; 
 }
 .cell-in:focus { outline: none; }
 select.cell-in option { background: #0b0b0b; }
+
+/* "+ Add links" opens as a floating panel over the board, so it never pushes or hides behind the cards */
+.hero > .add-links {
+  position: absolute; top: calc(100% + 10px); left: 50%; transform: translateX(-50%);
+  z-index: 250; margin: 0; width: min(600px, 92vw);
+  background: #080808; border-color: var(--line-strong);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(255, 255, 255, 0.02);
+  max-height: calc(100vh - 120px); overflow: auto;
+}

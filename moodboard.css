@@ -791,3 +791,24 @@ select.cell-in option { background: #0b0b0b; }
 }
 .chip-input::placeholder { color: var(--dim); }
 .chip-input:focus { outline: none; border-style: solid; border-color: rgba(166, 255, 61, 0.55); }
+
+/* ---------- carousel: one centred block, no empty bands ---------- */
+body.fit .stage { flex: 0 0 auto; margin-top: clamp(10px, 2.4vh, 26px); }
+body.fit .hero { margin-top: auto; }
+body.fit .info { margin-bottom: auto; padding-bottom: clamp(16px, 3vh, 32px); }
+body.fit .counter { margin-top: 4px; }
+
+/* the card that lands in the middle gives a short glow */
+.ring .card::after {
+  content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; opacity: 0;
+  box-shadow: inset 0 0 0 2px rgba(var(--glow), 0.95), inset 0 0 40px rgba(var(--glow), 0.45);
+}
+.ring .card.landed::after { animation: card-land 0.65s cubic-bezier(0.22, 0.8, 0.24, 1); }
+.ring .card.landed .layer { animation: card-land-flash 0.65s ease-out; }
+@keyframes card-land { 0% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes card-land-flash { 0% { filter: brightness(1.18); } 100% { filter: brightness(1); } }
+@media (prefers-reduced-motion: reduce) {
+  .ring .card.landed::after, .ring .card.landed .layer { animation: none; }
+}
+body.fit .hero, body.fit.in-brand .hero { padding-top: 14px; }
+body.fit .info { padding-bottom: 14px; }

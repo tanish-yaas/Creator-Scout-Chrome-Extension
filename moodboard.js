@@ -476,6 +476,7 @@ let G = null;         // cached geometry
 let activeSlot = -1;
 
 const PERSPECTIVE = 1500;
+const ACTIVE_SCALE = 1.07;   // the card in the middle is drawn a little bigger
 const MIN_SLOTS = 11;   // enough slots that a card never shows twice in view at the same time... unless there are very few items
 
 // Card size comes from the space the stage actually has, so the whole carousel fits on screen
@@ -484,8 +485,13 @@ function geometry() {
   const reel = S.brand !== null;
   const ratio = reel ? 16 / 9 : 1.32;
   const R = Math.max(900, w * 0.95);
-  const avail = Math.max(220, ($('stage').clientHeight || window.innerHeight * 0.55) - 40);
-  let cardW = reel ? Math.max(130, Math.min(200, w * 0.135)) : Math.max(160, Math.min(260, w * 0.17));
+  // Height left for the cards once the top bar, heading, counter and buttons are placed
+  const fit = document.body.classList.contains('fit');
+  const above = (document.querySelector('.top') || {}).offsetHeight + (document.querySelector('.hero') || {}).offsetHeight || 0;
+  const avail = fit
+    ? Math.max(220, window.innerHeight - above - 150)
+    : Math.max(220, ($('stage').clientHeight || window.innerHeight * 0.55) - 40);
+  let cardW = reel ? Math.max(130, Math.min(210, w * 0.14)) : Math.max(160, Math.min(290, w * 0.185));
   const gap = Math.max(18, w * 0.016);
   let cardH = 0;
   for (let k = 0; k < 4; k++) {
@@ -493,12 +499,16 @@ function geometry() {
     const step = Math.asin(Math.min(0.9, (cardW + gap) / R));
     // Outer cards come closer and look bigger; make sure they fit too
     const z = R * (1 - Math.cos(2.6 * step)) * 0.85;
-    const grow = PERSPECTIVE / (PERSPECTIVE - z);
+    const grow = Math.max(ACTIVE_SCALE, PERSPECTIVE / (PERSPECTIVE - z));
     if (cardH * grow <= avail) break;
     cardW = cardW * (avail / (cardH * grow)) * 0.98;
   }
   cardH = cardW * ratio;
-  return { cardW, cardH, gap, R, step: Math.asin(Math.min(0.9, (cardW + gap) / R)), avail, px: cardW + gap };
+  const step = Math.asin(Math.min(0.9, (cardW + gap) / R));
+  const grow = Math.max(ACTIVE_SCALE, PERSPECTIVE / (PERSPECTIVE - R * (1 - Math.cos(2.6 * step)) * 0.85));
+  // The ring is only as tall as the cards need, so the page has no empty bands around it
+  const ringH = Math.ceil(cardH * grow + 28);
+  return { cardW, cardH, gap, R, step, avail, ringH, px: cardW + gap };
 }
 
 const looping = () => slots > 1;
@@ -513,7 +523,7 @@ function layout(p = pos) {
   const ring = $('ring');
   ring.style.setProperty('--cw', G.cardW + 'px');
   ring.style.setProperty('--ch', G.cardH + 'px');
-  ring.style.height = G.avail + 'px';
+  ring.style.height = (document.body.classList.contains('fit') ? G.ringH : G.avail) + 'px';
   const act = slotOf(p);
   cardEls.forEach((c, k) => {
     const d = wrapD(k - p);
@@ -522,7 +532,9 @@ function layout(p = pos) {
     const x = G.R * Math.sin(t);
     const z = G.R * (1 - Math.cos(t)) * 0.85;
     const ry = -t * (180 / Math.PI) * 1.05;
-    c.style.transform = `translate3d(${x}px, 0, ${z}px) rotateY(${ry}deg)`;
+    // grows smoothly as it nears the middle, so the switch from card to card reads clearly
+    const s = 1 + (ACTIVE_SCALE - 1) * Math.max(0, 1 - ad);
+    c.style.transform = `translate3d(${x}px, 0, ${z}px) rotateY(${ry}deg) scale(${s.toFixed(4)})`;
     // Smooth fade at the edges of the wheel and a gentle dim away from the middle
     const op = Math.max(0, Math.min(1, (3.7 - ad) / 0.9));
     c.style.opacity = op;
@@ -550,11 +562,25 @@ function tick() {
   raf = 0;
   if (!(drag && drag.moved)) {
     const diff = target - pos;
+    const was = pos;
     pos = Math.abs(diff) < 0.0008 ? target : pos + diff * 0.14;
+    if (pos === target && was !== target) landed();
   }
   layout(pos);
   if (pos !== target && !(drag && drag.moved)) raf = requestAnimationFrame(tick);
 }
+// A short glow when the wheel settles on a card
+function landed() {
+  requestAnimationFrame(() => {
+    const el = cardEls[activeSlot];
+    if (!el) return;
+    el.classList.remove('landed');
+    void el.offsetWidth;
+    el.classList.add('landed');
+    setTimeout(() => el.classList.remove('landed'), 700);
+  });
+}
+
 function animateTo(t) {
   target = looping() ? t : 0;
   if (!raf) raf = requestAnimationFrame(tick);

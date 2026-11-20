@@ -812,3 +812,20 @@ body.fit .counter { margin-top: 4px; }
 }
 body.fit .hero, body.fit.in-brand .hero { padding-top: 14px; }
 body.fit .info { padding-bottom: 14px; }
+
+/* ---------- centre glow: behind the cards, not painted over the neighbours ---------- */
+.ring .card.active {
+  box-shadow: 0 0 0 1px rgba(var(--glow), 0.6), 0 30px 60px -36px rgba(0, 0, 0, 0.9);
+}
+.center-glow {
+  position: absolute; left: 50%; top: 50%;
+  width: calc(var(--cw) * 1.05); height: calc(var(--ch) * 1.02);
+  margin-left: calc(var(--cw) * -0.525); margin-top: calc(var(--ch) * -0.51);
+  border-radius: 22px;
+  background: var(--halo, rgb(166, 255, 61));
+  filter: blur(46px); opacity: 0.55;
+  transform: translateZ(-160px);
+  pointer-events: none;
+  transition: background 0.5s ease;
+}
+@media (prefers-reduced-transparency: reduce) { .center-glow { opacity: 0.35; } }

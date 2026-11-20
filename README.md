@@ -1,4 +1,4 @@
-# Creator Scout v4.20 🕵️‍♂️
+# Creator Scout v4.21 🕵️‍♂️
 
 Creator Scout is a Chrome extension for scouting Instagram and YouTube creators and their content. Everything you save stays inside the extension. You copy it into any Google Sheet when you want, it still syncs to the master database, and it lands on a moodboard grouped by brand and niche.
 

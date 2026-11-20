@@ -616,7 +616,8 @@ function buildStage() {
     slots = n <= 1 ? n : n * Math.ceil(MIN_SLOTS / n);
     const html = [];
     for (let k = 0; k < slots; k++) html.push(cardHTML(S.items[k % n], k % n).replace('<article class="card', `<article data-slot="${k}" class="card`));
-    ring.innerHTML = html.join('');
+    // the centre card's glow lives behind the whole wheel, so it never tints the neighbouring cards
+    ring.innerHTML = '<div class="center-glow" aria-hidden="true"></div>' + html.join('');
     cardEls = [...ring.querySelectorAll('.card')];
     cardEls.forEach(c => c.querySelectorAll('img').forEach(img => img.addEventListener('error', () => img.remove(), { once: true })));
     applyGlows(ring);

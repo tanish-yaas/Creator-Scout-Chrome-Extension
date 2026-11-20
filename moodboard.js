@@ -165,8 +165,10 @@ function renderHero() {
   $('back').classList.toggle('hidden', !inBrand);
   $('view-tabs').classList.toggle('hidden', !inBrand);
   $('brand-actions').classList.toggle('hidden', !inBrand || S.brand === UNFILED);
-  $('reel-tools').classList.toggle('hidden', !inBrand || S.tab !== 'reels');
-  if (!inBrand || S.tab !== 'reels') $('add-links').classList.add('hidden');
+  // "+ Add links" works on both tabs; filters and carousel / grid only make sense for reels
+  $('reel-tools').classList.toggle('hidden', !inBrand);
+  $('reel-tools').classList.toggle('creators-tab', S.tab === 'creators');
+  if (!inBrand) $('add-links').classList.add('hidden');
   document.body.classList.toggle('in-brand', inBrand);
   $('search').placeholder = !inBrand ? 'Search brands, creators, captions' : S.tab === 'creators' ? 'Search creators' : 'Search creators, captions, niches';
 
@@ -897,16 +899,18 @@ $('add-links').addEventListener('submit', async e => {
     try {
       const found = await lookupLink(link);
       if (!found) { failed++; continue; }
-      const { creator, content } = found;
-      const thumb = content.thumbUrl ? await thumbToDataUrl(content.thumbUrl) : '';
+      const { creator } = found;
+      const profileOnly = !found.content;
+      const content = found.content || {};
       const avatar = creator.avatarUrl ? await thumbToDataUrl(creator.avatarUrl, 240) : '';
+      const thumb = content.thumbUrl ? await thumbToDataUrl(content.thumbUrl) : (profileOnly ? avatar : '');
       const followers = Number(creator.followers) || 0;
       const { record } = await upsertRecord({
         platform: creator.platform || (content.kind === 'short' || content.kind === 'video' ? 'YouTube' : 'Instagram'),
         username: creator.username || '', name: creator.name || '', followers,
         category: creator.category || '--', tier: calculateTier(followers).name, type: '',
         url: creator.url || '', avgViews: creator.avgViews || '--', country: creator.country || '--',
-        contentUrl: content.url, contentKind: content.kind, thumb, thumbUrl: content.thumbUrl || '', avatar,
+        contentUrl: content.url || '', contentKind: content.kind || '', thumb, thumbUrl: content.thumbUrl || (profileOnly ? creator.avatarUrl || '' : ''), avatar,
         caption: content.caption || '', contentViews: content.views || 0, contentLikes: content.likes || 0,
         contentComments: content.comments || 0, postedAt: content.postedAt || '',
         brand, niche, festive: [], savedBy
@@ -917,7 +921,7 @@ $('add-links').addEventListener('submit', async e => {
   }
   btn.disabled = false;
   $('links-progress').textContent = failed
-    ? `Added ${done}. ${failed} ${failed === 1 ? 'link' : 'links'} couldn't be read. Check they're public reels, posts, shorts or videos.`
+    ? `Added ${done}. ${failed} ${failed === 1 ? 'link' : 'links'} couldn't be read. Check they're public reels, posts, videos or profiles.`
     : `Added ${done} to ${brandLabel(S.brand)}.`;
   if (done) $('links-input').value = '';
 });
@@ -1437,7 +1441,7 @@ function render() {
     cardEls = [];
     $('info').innerHTML = (S.q || activeFilterCount())
       ? `<p class="empty">Nothing matches. Clear the search or a filter to see more.</p>`
-      : S.brand !== null ? `<p class="empty">No reels for ${esc(brandLabel(S.brand))} yet. Use “+ Add reel links”, or open a reel and save it with the extension.</p>` : '';
+      : S.brand !== null ? `<p class="empty">No reels for ${esc(brandLabel(S.brand))} yet. Use “+ Add links”, or open a reel and save it with the extension.</p>` : '';
     return;
   }
   if (grid) buildGrid(); else buildStage();

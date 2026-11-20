@@ -149,10 +149,30 @@ async function igLookupProfile(username) {
   return out;
 }
 
-// Builds a full record from any Instagram or YouTube reel / short / video link
+// Instagram profile link (instagram.com/username/) -> the username, else ''
+const IG_NOT_PROFILES = ['p', 'reel', 'reels', 'tv', 'explore', 'direct', 'accounts', 'stories', 'about', 'legal', 'developer'];
+function igProfileName(link) {
+  let u;
+  try { u = new URL(link); } catch (e) { return ''; }
+  if (!u.hostname.endsWith('instagram.com')) return '';
+  const parts = u.pathname.split('/').filter(Boolean);
+  return parts.length === 1 && /^[\w.]{1,30}$/.test(parts[0]) && !IG_NOT_PROFILES.includes(parts[0].toLowerCase()) ? parts[0] : '';
+}
+
+// Builds a full record from any Instagram or YouTube link: a reel / post / short / video,
+// or a profile / channel (then content is null and only the creator is saved)
 async function lookupLink(link) {
+  const igUser = igProfileName(link);
+  if (igUser) {
+    const p = await igLookupProfile(igUser);
+    return { creator: { platform: 'Instagram', username: igUser, name: p.name || igUser, followers: p.followers || 0, category: '--', url: `https://www.instagram.com/${igUser}/`, avatarUrl: p.avatarUrl || '' }, content: null };
+  }
   if (/youtube\.com|youtu\.be/.test(link)) {
     const p = parseYouTubeUrl(link);
+    if (!p.videoId && (p.handle || p.channelId || p.legacyUser)) {
+      const creator = await fetchChannel(p);
+      return creator ? { creator, content: null } : null;
+    }
     if (!p.videoId) return null;
     const v = await fetchYouTubeVideo(p.videoId, p.kind);
     if (!v) return null;

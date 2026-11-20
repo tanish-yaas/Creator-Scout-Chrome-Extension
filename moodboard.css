@@ -780,3 +780,6 @@ select.cell-in option { background: #0b0b0b; }
   box-shadow: 0 24px 60px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(255, 255, 255, 0.02);
   max-height: calc(100vh - 120px); overflow: auto;
 }
+
+/* no empty gap where the home subtitle used to be */
+.sub:empty { display: none; }

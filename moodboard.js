@@ -177,9 +177,8 @@ function renderHero() {
     const brands = brandNames().filter(b => b !== UNFILED).length;
     $('title').textContent = 'Everything you scouted as a team, all in one place';
     $('title').removeAttribute('title');
-    $('sub').textContent = S.records.length
-      ? `${S.records.length} saved${brands ? ` across ${brands} ${brands === 1 ? 'brand' : 'brands'}` : ', none filed under a brand yet'}. Swipe, drag or use the arrow keys, and open a card to see its reels and creators.`
-      : 'Open a reel or a creator, click Creator Scout and save. It lands here for the whole team straight away.';
+    // Only a hint when the board is empty; otherwise the tagline stands alone
+    $('sub').textContent = S.records.length ? '' : 'Open a reel or a creator, click Creator Scout and save. It lands here for the whole team straight away.';
   } else {
     const all = brandRecords();
     const reels = all.filter(isContent).length;

@@ -1031,9 +1031,20 @@ document.addEventListener('pointerdown', e => {
   f.classList.add('hidden');
 });
 
+// Accept links however they're pasted: with or without https://, www., m. or a trailing "(reel)" note
+function normalizeLink(raw) {
+  let s = String(raw || '').trim().replace(/^[<("']+|[>)"'.;]+$/g, '');
+  if (!s) return '';
+  if (!/^https?:\/\//i.test(s)) {
+    if (!/^(www\.|m\.)?(instagram\.com|instagr\.am|youtube\.com|youtu\.be)\//i.test(s)) return '';
+    s = 'https://' + s;
+  }
+  return s.replace(/^http:\/\//i, 'https://');
+}
+
 $('add-links').addEventListener('submit', async e => {
   e.preventDefault();
-  const links = [...new Set($('links-input').value.split(/[\s,]+/).map(s => s.trim()).filter(s => /^https?:\/\//.test(s)))];
+  const links = [...new Set($('links-input').value.split(/[\s,]+/).map(normalizeLink).filter(Boolean))];
   if (!links.length) { $('links-progress').textContent = 'Paste at least one Instagram or YouTube link.'; return; }
   const niche = $('links-niche').value.trim();
   const brand = S.brand === UNFILED ? '' : S.brand;

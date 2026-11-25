@@ -94,17 +94,26 @@ async function loadNotes() {
   } catch (e) { /* notes are optional */ }
 }
 
+// Never wait forever on Chrome: if something doesn't answer in a few seconds, carry on without it
+const within = (p, ms, fallback) => Promise.race([p, new Promise(r => setTimeout(() => r(fallback), ms))]);
+
 async function init() {
   $('zip-link').href = updateUrls().zip;
-  $('auto-toggle').checked = await autoUpdateOn();
-  const dir = await savedFolder();
-  const access = await folderAccess(dir);
+  // This tab outlived a restart of Creator Scout (e.g. an update just installed itself)
+  if (!chrome.runtime || !chrome.runtime.id) {
+    $('title').textContent = 'Creator Scout restarted';
+    $('versions').textContent = 'Close this tab and open the moodboard again. If an update was waiting, it has probably installed already: the version is shown at the bottom of the popup.';
+    return;
+  }
+  $('auto-toggle').checked = await within(autoUpdateOn(), 3000, true);
+  const dir = await within(savedFolder(), 3000, null);
+  const access = await within(folderAccess(dir), 3000, 'none');
   $('auto-state').textContent = access === 'granted'
     ? `On. Updates install by themselves when the moodboard or sheet opens.`
     : dir ? 'Waiting for permission. Press Update now once and choose “Allow on every visit”.'
     : 'Starts after your first update here.';
 
-  info = await checkForUpdate(true);
+  info = await within(checkForUpdate(true), 15000, { current: chrome.runtime.getManifest().version, latest: chrome.runtime.getManifest().version, available: false, error: 'GitHub took too long to answer' });
   if (info.error && !info.available) {
     $('title').textContent = 'Couldn\'t check for updates';
     $('versions').textContent = `You're on ${info.current}. ${info.error}.`;

@@ -7,6 +7,7 @@
 
 const S = {
   records: [],
+  selCreators: new Set(),  // creators ticked in the Creators table (platform:username)
   taxonomy: { brands: {}, meta: {}, festive: [] },
   brand: null,            // null = brands view; otherwise brand name or '__unfiled'
   tab: 'reels',           // inside a brand: 'reels' | 'creators'
@@ -211,11 +212,12 @@ function renderHero() {
 // Soft glow behind the brand name in the brand's own colour (card colour, else its logo / reels)
 async function setTitleGlow(name) {
   const row = document.querySelector('.title-row');
-  if (!name) { row.style.removeProperty('--brand-glow'); row.classList.remove('glowing'); return; }
+  if (!name) { row.style.removeProperty('--brand-glow'); $('add-links').style.removeProperty('--bar'); row.classList.remove('glowing'); return; }
   const { rgb, src } = glowSource({ kind: 'brand', name, recs: brandRecordsFor(name) });
   const colour = rgb || (src && (glowCache.get(glowKey(src)) || await coverColor(src))) || DEFAULT_GLOW;
   if (S.brand !== name) return;
   row.style.setProperty('--brand-glow', colour);
+  $('add-links').style.setProperty('--bar', colour);
   row.classList.add('glowing');
 }
 
@@ -842,6 +844,7 @@ async function repairMissingCreators(name) {
 function openBrand(name) {
   setTimeout(() => repairMissingCreators(name), 800);
   S.homeIndex = S.index;
+  if (S.brand !== name) S.selCreators.clear();
   S.brand = name;
   S.tab = brandRecordsFor(name).some(isContent) ? 'reels' : 'creators';
   S.niches.clear();
@@ -938,14 +941,19 @@ function renderCreators() {
   $('creators').innerHTML = `
     <div class="creators-head">
       <p>${list.length} ${list.length === 1 ? 'creator' : 'creators'}</p>
-      ${SHARE ? '' : '<button id="copy-creators" class="ghost-btn">Copy list for Sheets</button>'}
+      <div class="creators-acts">
+        ${SHARE ? '' : `<button id="remove-selected" class="ghost-btn danger${S.selCreators.size ? '' : ' hidden'}">Remove ${S.selCreators.size} selected</button>`}
+        ${SHARE ? '' : '<button id="copy-creators" class="ghost-btn">Copy list for Sheets</button>'}
+      </div>
     </div>
     <div class="ctable-wrap"><table class="ctable">
-      <thead><tr><th>Creator</th><th class="num">Followers</th><th>Tier</th><th>Category</th><th>Type</th><th>Niches</th><th class="num">Reels</th>${SHARE ? '' : '<th>Saved by</th>'}<th></th></tr></thead>
+      <thead><tr>${SHARE ? '' : `<th class="sel"><input type="checkbox" id="sel-all" aria-label="Select all creators" ${list.length && list.every(c => S.selCreators.has(c.platform + ':' + c.username)) ? 'checked' : ''}></th>`}<th>Creator</th><th class="num">Followers</th><th>Tier</th><th>Category</th><th>Type</th><th>Niches</th><th class="num">Reels</th>${SHARE ? '' : '<th>Saved by</th>'}<th></th></tr></thead>
       <tbody>${list.map(c => {
         const tier = calculateTier(c.followers);
         const ini = String(c.username).replace(/^@/, '').charAt(0).toUpperCase();
-        return `<tr>
+        const key = c.platform + ':' + c.username;
+        return `<tr class="${S.selCreators.has(key) ? 'picked' : ''}">
+          ${SHARE ? '' : `<td class="sel"><input type="checkbox" class="sel-one" data-user="${esc(key)}" aria-label="Select ${esc(handleOf(c))}" ${S.selCreators.has(key) ? 'checked' : ''}></td>`}
           <td><div class="who">
             <span class="ava">${c.avatar ? `<img src="${esc(sized(c.avatar, 96))}" alt="" loading="lazy" decoding="async">` : esc(ini)}</span>
             <span><b>${esc(handleOf(c))}</b>${c.name ? `<small>${esc(c.name)}</small>` : ''}</span>
@@ -963,6 +971,30 @@ function renderCreators() {
     </table></div>`;
   $('creators').querySelectorAll('td.ed').forEach(td => td.addEventListener('click', () => openCellEditor(td)));
   $('creators').querySelectorAll('.c-del').forEach(b => b.addEventListener('click', () => removeCreator(b.dataset.user)));
+  const syncSel = () => {
+    const btn = $('remove-selected');
+    if (btn) { btn.textContent = `Remove ${S.selCreators.size} selected`; btn.classList.toggle('hidden', !S.selCreators.size); }
+    const all = $('sel-all');
+    if (all) {
+      const n = list.filter(c => S.selCreators.has(c.platform + ':' + c.username)).length;
+      all.checked = n === list.length; all.indeterminate = n > 0 && n < list.length;
+    }
+  };
+  $('creators').querySelectorAll('.sel-one').forEach(cb => cb.addEventListener('change', () => {
+    cb.checked ? S.selCreators.add(cb.dataset.user) : S.selCreators.delete(cb.dataset.user);
+    cb.closest('tr').classList.toggle('picked', cb.checked);
+    syncSel();
+  }));
+  if ($('sel-all')) $('sel-all').addEventListener('change', e => {
+    const on = e.target.checked;
+    $('creators').querySelectorAll('.sel-one').forEach(cb => {
+      cb.checked = on; on ? S.selCreators.add(cb.dataset.user) : S.selCreators.delete(cb.dataset.user);
+      cb.closest('tr').classList.toggle('picked', on);
+    });
+    syncSel();
+  });
+  if ($('remove-selected')) $('remove-selected').addEventListener('click', () => removeCreators([...S.selCreators]));
+  syncSel();
   $('creators').querySelectorAll('.ava img').forEach(img => img.addEventListener('error', () => img.remove(), { once: true }));
   if ($('copy-creators')) $('copy-creators').addEventListener('click', async () => {
     const head = ['Username', 'Name', 'Platform', 'Followers', 'Tier', 'Category', 'Type', 'Niches', 'Reels saved', 'Saved by', 'URL'];
@@ -1042,18 +1074,39 @@ function normalizeLink(raw) {
   return s.replace(/^http:\/\//i, 'https://');
 }
 
+// Progress for "Add links": a bar that fills in the brand's colour, the count, and who's being added
+function linksProgress(frac, text, who = '', finished = false) {
+  const box = $('links-progress');
+  if (frac == null) { box.className = 'links-progress'; box.innerHTML = esc(text); return; }
+  box.className = 'links-progress has-bar' + (finished ? ' finished' : ' running');
+  if (!box.querySelector('.lp-bar')) {
+    box.innerHTML = '<span class="lp-track"><span class="lp-bar"></span></span><span class="lp-row"><span class="lp-text"></span><span class="lp-who"></span></span>';
+  }
+  box.querySelector('.lp-bar').style.width = Math.max(3, Math.round(frac * 100)) + '%';
+  box.querySelector('.lp-text').textContent = text;
+  box.querySelector('.lp-who').textContent = who;
+}
+
+function handleFromLink(link) {
+  const m = String(link).match(/(?:instagram\.com|youtube\.com)\/(@?[\w.-]+)\/?(?:$|[?#])/i);
+  if (m && !/^(p|reel|reels|tv|watch|shorts)$/i.test(m[1])) return '@' + m[1].replace(/^@/, '');
+  if (/\/(p|reel|reels|tv)\//i.test(link)) return 'reel';
+  return '';
+}
+
 $('add-links').addEventListener('submit', async e => {
   e.preventDefault();
   const links = [...new Set($('links-input').value.split(/[\s,]+/).map(normalizeLink).filter(Boolean))];
-  if (!links.length) { $('links-progress').textContent = 'Paste at least one Instagram or YouTube link.'; return; }
+  if (!links.length) { linksProgress(null, 'Paste at least one Instagram or YouTube link.'); return; }
   const niche = $('links-niche').value.trim();
   const brand = S.brand === UNFILED ? '' : S.brand;
   const savedBy = await new Promise(res => chrome.storage.sync.get(['savedBy'], r => res(r.savedBy || '')));
   const btn = $('links-submit');
   btn.disabled = true;
+  $('links-progress').innerHTML = '';
   let done = 0, failed = 0;
   for (const link of links) {
-    $('links-progress').textContent = `Adding ${done + failed + 1} of ${links.length}…`;
+    linksProgress((done + failed) / links.length, `Adding ${done + failed + 1} of ${links.length}…`, handleFromLink(link));
     try {
       const found = await lookupLink(link);
       if (!found) { failed++; continue; }
@@ -1076,11 +1129,12 @@ $('add-links').addEventListener('submit', async e => {
       sendToMaster(record);
       done++;
     } catch (err) { failed++; }
+    linksProgress((done + failed) / links.length, `Adding ${Math.min(done + failed + 1, links.length)} of ${links.length}…`, handleFromLink(link));
   }
   btn.disabled = false;
-  $('links-progress').textContent = failed
+  linksProgress(1, failed
     ? `Added ${done}. ${failed} ${failed === 1 ? 'link' : 'links'} couldn't be read. Check they're public reels, posts, videos or profiles.`
-    : `Added ${done} to ${brandLabel(S.brand)}.`;
+    : `Added ${done} to ${brandLabel(S.brand)}.`, '', true);
   if (done) $('links-input').value = '';
 });
 
@@ -1623,6 +1677,26 @@ async function removeCreator(key) {
     for (const r of rows) await deleteRecord(r.id);
     toast(`${handleOf(rows[0])} removed`);
   } catch (err) { toast('Couldn\'t remove: ' + err.message); }
+}
+
+// Removes several creators from this brand at once (profile rows and their reels)
+async function removeCreators(keys) {
+  const want = new Set(keys.map(k => { const [p, ...r] = k.split(':'); return p + ':' + r.join(':').toLowerCase().replace(/^@/, ''); }));
+  const rows = brandRecords().filter(r => want.has(r.platform + ':' + String(r.username).toLowerCase().replace(/^@/, '')));
+  if (!rows.length) { S.selCreators.clear(); renderCreators(); return; }
+  if (want.size === 1) { await removeCreator(keys[0]); S.selCreators.clear(); renderCreators(); return; }
+  const reels = rows.filter(isContent).length;
+  const ok = await confirmDialog({
+    title: `Remove ${want.size} creators?`,
+    html: `<p>They're removed from ${esc(brandLabel(S.brand))} for everyone${reels ? `, with ${reels} ${reels === 1 ? 'reel' : 'reels'}` : ''}. The master database isn't touched.</p>`,
+    okLabel: `Remove ${want.size}`
+  });
+  if (!ok) return;
+  let failed = 0;
+  for (const r of rows) { try { await deleteRecord(r.id); } catch (err) { failed++; } }
+  S.selCreators.clear();
+  renderCreators();
+  toast(failed ? `Removed with ${failed} ${failed === 1 ? 'error' : 'errors'}` : `${want.size} creators removed`);
 }
 
 async function deleteBrand(name) {

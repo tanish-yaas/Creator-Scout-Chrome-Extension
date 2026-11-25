@@ -850,3 +850,37 @@ body.in-brand .title-row.glowing::before {
   border-radius: 999px; cursor: pointer;
 }
 .hero .back:hover { background: rgba(255, 255, 255, 0.06); }
+
+/* Add links: progress bar in the brand's colour, with the count and who's being added */
+.links-progress.has-bar { display: grid; gap: 8px; color: var(--dim); }
+.lp-track { position: relative; height: 6px; border-radius: 99px; background: rgba(255, 255, 255, 0.07); overflow: hidden; }
+.lp-bar {
+  --c: var(--bar, 166, 255, 61);
+  position: absolute; inset: 0 auto 0 0; width: 3%; border-radius: inherit;
+  background: linear-gradient(90deg, rgba(var(--c), 0.55), rgb(var(--c)));
+  box-shadow: 0 0 14px rgba(var(--c), 0.75);
+  transition: width 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.links-progress.running .lp-bar::after {
+  content: ''; position: absolute; inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.55), transparent);
+  transform: translateX(-100%); animation: lp-sheen 1.1s linear infinite;
+}
+@keyframes lp-sheen { to { transform: translateX(100%); } }
+.lp-row { display: flex; justify-content: space-between; gap: 12px; font-variant-numeric: tabular-nums; }
+.lp-text { color: var(--text); }
+.lp-who { color: var(--mute); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.links-progress.finished .lp-bar { box-shadow: 0 0 8px rgba(var(--c), 0.5); }
+@media (prefers-reduced-motion: reduce) {
+  .lp-bar { transition: none; }
+  .links-progress.running .lp-bar::after { animation: none; }
+}
+
+/* Creators table: select and remove */
+.creators-acts { display: flex; gap: 8px; align-items: center; }
+.ghost-btn.danger { color: #ff8a8a; border-color: rgba(255, 107, 107, 0.35); }
+.ghost-btn.danger:hover { color: #fff; background: rgba(255, 107, 107, 0.16); border-color: rgba(255, 107, 107, 0.6); }
+.ctable th.sel, .ctable td.sel { width: 1%; padding-right: 0; }
+.ctable input[type="checkbox"] { width: 15px; height: 15px; accent-color: #ff6b6b; cursor: pointer; vertical-align: middle; }
+.ctable tr.picked td { background: rgba(255, 107, 107, 0.06); }
+.c-del { opacity: 0.45; }

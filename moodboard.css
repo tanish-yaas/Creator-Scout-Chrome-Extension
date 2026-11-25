@@ -796,6 +796,8 @@ select.cell-in option { background: #0b0b0b; }
 body.fit .stage { flex: 0 0 auto; margin-top: clamp(10px, 2.4vh, 26px); }
 body.fit .hero { margin-top: auto; }
 body.fit .info { margin-bottom: auto; padding-bottom: clamp(16px, 3vh, 32px); }
+/* Nothing to show (no reels yet, or filters match nothing): keep the title at the top, not floating mid-screen */
+body.fit.is-empty .hero { margin-top: 0; }
 body.fit .counter { margin-top: 4px; }
 
 /* the card that lands in the middle gives a short glow */

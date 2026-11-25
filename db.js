@@ -206,6 +206,65 @@ async function markExported(ids) {
   await setRecords(records);
 }
 
+// ---------- your own sheet ----------
+// The sheet is per person: it shows what you saved from the popup on this browser, not the whole team
+// board. Edits and deletes in the sheet stay in your sheet; the team board isn't touched.
+
+const MINE_KEY = 'scoutMine';          // keys of team-board rows you saved yourself
+const SHEET_EDITS_KEY = 'scoutSheetEdits'; // your own changes to those rows, shown only in your sheet
+
+async function getMine() {
+  const r = await storageGet([MINE_KEY]);
+  return new Set(r[MINE_KEY] || []);
+}
+async function markMine(rec) {
+  const k = recordKey(rec);
+  if (!k) return;
+  const mine = await getMine();
+  if (mine.has(k)) return;
+  mine.add(k);
+  await storageSet({ [MINE_KEY]: [...mine] });
+}
+
+async function getMyRecords() {
+  const [records, mine, r] = await Promise.all([getRecords(), getMine(), storageGet([SHEET_EDITS_KEY])]);
+  const edits = r[SHEET_EDITS_KEY] || {};
+  return records
+    .filter(x => x.localOnly || mine.has(recordKey(x)))
+    .map(x => ({ ...normalizeRecord(x), ...(edits[recordKey(x)] || {}) }));
+}
+
+async function editMyRow(rec, patch) {
+  if (rec.localOnly) return localUpdate(rec.id, patch);
+  const r = await storageGet([SHEET_EDITS_KEY]);
+  const edits = r[SHEET_EDITS_KEY] || {};
+  const k = recordKey(rec);
+  edits[k] = { ...(edits[k] || {}), ...patch };
+  await storageSet({ [SHEET_EDITS_KEY]: edits });
+}
+
+async function removeFromMySheet(rec) {
+  if (rec.localOnly) return localDelete(rec.id);
+  const k = recordKey(rec);
+  const mine = await getMine();
+  mine.delete(k);
+  const r = await storageGet([SHEET_EDITS_KEY]);
+  const edits = r[SHEET_EDITS_KEY] || {};
+  delete edits[k];
+  await storageSet({ [MINE_KEY]: [...mine], [SHEET_EDITS_KEY]: edits });
+}
+
+// Puts every team-board row you saved (by your name) into your sheet
+async function addAllMySavesToSheet(name) {
+  if (!name) return 0;
+  const n = name.trim().toLowerCase();
+  const mine = await getMine();
+  let added = 0;
+  (await getRecords()).forEach(r => { const k = recordKey(r); if (k && String(r.savedBy || '').trim().toLowerCase() === n && !mine.has(k)) { mine.add(k); added++; } });
+  await storageSet({ [MINE_KEY]: [...mine] });
+  return added;
+}
+
 // ---------- number helpers ----------
 
 function parseCount(str) {
@@ -498,6 +557,7 @@ function queueUpload() {
 // Moodboard save: lands on this browser (and the moodboard) straight away, then uploads in the background.
 async function saveToBoard(rec) {
   rec = { ...normalizeRecord(rec), lastSavedAt: Date.now() };
+  await markMine(rec);
   if (!teamOn()) return localUpsert(rec);
   const r = await localUpsert({ ...rec, localOnly: false, synced: false, pending: true });
   queueUpload();
@@ -517,6 +577,7 @@ async function replaceLocal(oldId, rec) {
 // If the same reel / creator is already on the moodboard, that row is refreshed instead.
 async function saveToSheet(rec) {
   rec = { ...normalizeRecord(rec), lastSavedAt: Date.now() };
+  await markMine(rec);
   const existing = (await getRecords()).find(r => recordKey(r) === recordKey(rec));
   if (existing && existing.synced) return saveToBoard({ ...rec, brand: rec.brand || existing.brand, niche: rec.niche || existing.niche, festive: rec.festive && rec.festive.length ? rec.festive : existing.festive });
   return localUpsert({ ...rec, localOnly: true, pending: false }, { register: false });

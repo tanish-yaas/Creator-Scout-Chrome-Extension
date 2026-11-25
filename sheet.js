@@ -56,10 +56,10 @@ const visibleCols = () => view.order.filter(n => !view.hidden.includes(n)).map(n
 // ---------- data ----------
 
 async function load() {
-  rows = (await getRecords()).slice().sort((a, b) => (a.savedAt || 0) - (b.savedAt || 0));
+  rows = (await getMyRecords()).sort((a, b) => (a.savedAt || 0) - (b.savedAt || 0));
   render();
 }
-chrome.storage.onChanged.addListener((c, area) => { if (area === 'local' && c[SCOUT_KEYS.records]) load(); });
+chrome.storage.onChanged.addListener((c, area) => { if (area === 'local' && (c[SCOUT_KEYS.records] || c[MINE_KEY] || c[SHEET_EDITS_KEY])) load(); });
 
 function cellText(r, name) {
   let v = COLS.get(name)[1](r);
@@ -171,7 +171,7 @@ function render() {
     return `<tr class="${r.exportedAt ? '' : 'fresh'}${selected.has(r.id) ? ' is-sel' : ''}${hiddenRow ? ' is-hidden' : ''}" data-id="${r.id}">
       <td class="sel"><input type="checkbox" data-sel="${r.id}" aria-label="Select row ${n}" ${selected.has(r.id) ? 'checked' : ''}></td>
       <td class="sr">${n}</td>${cells}
-      <td class="act"><button class="del" data-del="${r.id}" title="Delete this row for everyone">×</button></td></tr>`;
+      <td class="act"><button class="del" data-del="${r.id}" title="Remove this row from your sheet (the team board isn't touched)">×</button></td></tr>`;
   }).join('');
 }
 
@@ -251,16 +251,17 @@ $('tbody').addEventListener('focusout', async e => {
   const before = key === 'festive' ? (r.festive || []).join(', ') : (r[key] || '');
   if ((key === 'festive' ? value.join(', ') : value) === before) return;
   try {
-    await updateRecord(r.id, { [key]: value, exportedAt: null });
-    toast('Saved');
-  } catch (err) { toast('Couldn\'t save to the team board: ' + err.message); load(); }
+    await editMyRow(r, { [key]: value });
+    toast('Saved in your sheet');
+  } catch (err) { toast('Couldn\'t save: ' + err.message); load(); }
 });
 $('tbody').addEventListener('click', async e => {
   const b = e.target.closest('[data-del]');
   if (!b) return;
-  if (b.dataset.confirm !== '1') { b.dataset.confirm = '1'; b.textContent = 'Delete for everyone?'; b.classList.add('confirm'); return; }
-  try { await deleteRecord(b.dataset.del); toast('Row deleted'); }
-  catch (err) { toast('Couldn\'t delete on the team board: ' + err.message); }
+  if (b.dataset.confirm !== '1') { b.dataset.confirm = '1'; b.textContent = 'Remove?'; b.classList.add('confirm'); return; }
+  const r = rows.find(x => x.id === b.dataset.del);
+  try { if (r) await removeFromMySheet(r); toast('Removed from your sheet'); }
+  catch (err) { toast('Couldn\'t remove: ' + err.message); }
 });
 
 // ---------- column header menu: sort, filter, hide, move ----------
@@ -509,6 +510,13 @@ function restoreCleared() {
 
 $('more').addEventListener('click', () => { $('columns-menu').classList.add('hidden'); $('more-menu').classList.toggle('hidden'); });
 $('open-gsheet').addEventListener('click', () => window.open('https://sheets.new', '_blank'));
+$('add-my-saves').addEventListener('click', async () => {
+  $('more-menu').classList.add('hidden');
+  const name = await new Promise(res => chrome.storage.sync.get(['savedBy'], r => res(r.savedBy || '')));
+  if (!name) { toast('Add your name in the popup first (bottom right), then try again.'); return; }
+  const n = await addAllMySavesToSheet(name);
+  toast(n ? `Added ${n} of your earlier saves` : 'Nothing else saved under your name');
+});
 $('mark-copied').addEventListener('click', async () => { await markExported(viewRows().map(r => r.id)); $('more-menu').classList.add('hidden'); toast('Rows marked as copied'); });
 $('reset-view').addEventListener('click', () => {
   view = { ...loadView(), order: SHEET_COLUMNS.map(c => c[0]), hidden: [], sort: null, filters: {}, hiddenRows: [], clearedAt: view.clearedAt, showHidden: false };

@@ -1,4 +1,4 @@
-# Creator Scout v4.25 🕵️‍♂️
+# Creator Scout v4.26 🕵️‍♂️
 
 Creator Scout is a Chrome extension for scouting Instagram and YouTube creators and their content. Everything you save stays inside the extension. You copy it into any Google Sheet when you want, it still syncs to the master database, and it lands on a moodboard grouped by brand and niche.
 
@@ -22,7 +22,7 @@ Creator Scout is a Chrome extension for scouting Instagram and YouTube creators 
   * Double-click a brand's title to rename it for everyone.
   * **Share with client:** inside a brand, this button in the top bar creates a private link to that brand's moodboard. The client sees the reels and creators the way you do, read-only, with no other brands and no teammates' names, and it stays up to date. You can turn the link off or replace it at any time. Setup: `team-backend/SETUP.md`, "Client links".
   * **Deleting:** hover a reel and press × (or **Delete this reel** in the player) and confirm. To delete a whole brand, open **Edit card → Delete brand** and type the brand's name to confirm, like deleting a GitHub repo.
-* **Creator list (the sheet):** **Open sheet** in the popup opens every saved row, with Google Sheets-style tools:
+* **Creator list (the sheet):** each person has their own sheet. **Open sheet** shows only what you saved from the popup on your browser (in either mode), not your teammates' saves. Editing or removing a row there changes only your sheet, never the team board. **··· → Add everything I saved on the team board** pulls in your earlier saves (matched by your name). Google Sheets-style tools:
   * **Each column heading:** click it to sort; use its ▾ menu to sort A→Z or Z→A, filter by values (and by a min/max range for number columns), hide the column or move it. You can also drag headings to reorder them.
   * **Columns panel:** show, hide and reorder columns.
   * **Rows:** tick checkboxes to hide rows or copy just those.

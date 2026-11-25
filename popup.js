@@ -522,7 +522,7 @@ sendBtn.addEventListener('click', async () => {
 // ---------- sheet count ----------
 
 async function updateSavedCount() {
-  const records = await getRecords();
+  const records = await getMyRecords();
   const fresh = records.filter(r => !r.exportedAt).length;
   const el = $('sheet-count');
   el.innerText = `${records.length} ${records.length === 1 ? 'creator' : 'creators'}${fresh ? `, ${fresh} new` : ''}`;
